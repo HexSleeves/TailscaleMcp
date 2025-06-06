@@ -13,73 +13,42 @@ A modern [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server 
 
 ## Quick Start
 
-### Installation
+### Option 1: NPX (Recommended)
+
+Run directly without installation:
 
 ```bash
-# Install globally
+npx -y @hexsleeve/tailscale-mcp-server
+```
+
+Or install globally:
+
+```bash
 npm install -g @hexsleeve/tailscale-mcp-server
-
-# Or run directly
-npx @hexsleeve/tailscale-mcp-server
+tailscale-mcp-server
 ```
 
-### Development Setup
+### Option 2: Docker
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd TailscaleMcp
+# Pull and run from Docker Hub (when published)
+docker run -d \
+  --name tailscale-mcp \
+  -e TAILSCALE_API_KEY=your_api_key \
+  -e TAILSCALE_TAILNET=your_tailnet \
+  ghcr.io/your-username/tailscale-mcp-server:latest
 
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Run in development mode
-npm run dev
+# Or use Docker Compose
+docker-compose up -d
 ```
 
-### Environment Setup
+## Configuration
 
-For local development and testing, you can use environment files:
-
-#### Quick Setup (Recommended)
-
-```bash
-# Run the setup script
-./scripts/setup-env.sh
-
-# Then edit .env with your actual credentials
-```
-
-#### Manual Setup
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Create logs directory
-mkdir -p logs
-
-# Edit .env with your actual Tailscale credentials
-# TAILSCALE_API_KEY=your-actual-api-key
-# TAILSCALE_TAILNET=your-actual-tailnet
-```
-
-The `.env.example` file contains all available configuration options with documentation. Key variables for testing:
-
-- **TAILSCALE_API_KEY**: Get from [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
-- **TAILSCALE_TAILNET**: Your organization/tailnet name
-- **LOG_LEVEL**: Set to `0` for debug logging during development
-- **MCP_SERVER_LOG_FILE**: Enable server logging to file
-- **MCP_LOG_FILE**: Enable test script logging to file
-
-### Configuration
-
-#### Claude Desktop
+### Claude Desktop
 
 Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`):
+
+#### Using NPX (Recommended)
 
 ```json
 {
@@ -96,7 +65,42 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
 }
 ```
 
-#### Environment Variables
+#### Using Docker
+
+```json
+{
+  "mcpServers": {
+    "tailscale": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "TAILSCALE_API_KEY=your-api-key",
+        "-e",
+        "TAILSCALE_TAILNET=your-tailnet",
+        "ghcr.io/your-username/tailscale-mcp-server:latest"
+      ]
+    }
+  }
+}
+```
+
+#### Using Docker Compose
+
+```json
+{
+  "mcpServers": {
+    "tailscale": {
+      "command": "docker",
+      "args": ["compose", "exec", "tailscale-mcp", "node", "/app/dist/index.js"]
+    }
+  }
+}
+```
+
+### Environment Variables
 
 ```bash
 # Required for API operations
@@ -132,6 +136,139 @@ export MCP_SERVER_LOG_FILE="tailscale-mcp-{timestamp}.log"  # Enable file loggin
 - `get_tailnet_info` - Get detailed network information
 
 ## Development
+
+### Local Development Setup
+
+For local development and testing, clone the repository and set up the development environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/tailscale-mcp-server.git
+cd tailscale-mcp-server
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+```
+
+### Environment Setup
+
+#### Quick Setup (Recommended)
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Create logs directory
+mkdir -p logs
+
+# Edit .env with your actual Tailscale credentials
+# TAILSCALE_API_KEY=your-actual-api-key
+# TAILSCALE_TAILNET=your-actual-tailnet
+```
+
+The `.env.example` file contains all available configuration options with documentation. Key variables for testing:
+
+- **TAILSCALE_API_KEY**: Get from [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
+- **TAILSCALE_TAILNET**: Your organization/tailnet name
+- **LOG_LEVEL**: Set to `0` for debug logging during development
+- **MCP_SERVER_LOG_FILE**: Enable server logging to file
+- **MCP_LOG_FILE**: Enable test script logging to file
+
+### Local Connection to Claude Desktop
+
+For development, configure Claude Desktop to use your local build:
+
+#### Option 1: Direct Node Execution
+
+```json
+{
+  "mcpServers": {
+    "tailscale-dev": {
+      "command": "node",
+      "args": ["/path/to/your/tailscale-mcp-server/dist/index.js"],
+      "env": {
+        "TAILSCALE_API_KEY": "your-api-key-here",
+        "TAILSCALE_TAILNET": "your-tailnet-name",
+        "LOG_LEVEL": "0"
+      }
+    }
+  }
+}
+```
+
+#### Option 2: NPM Script
+
+```json
+{
+  "mcpServers": {
+    "tailscale-dev": {
+      "command": "npm",
+      "args": ["run", "start"],
+      "cwd": "/path/to/your/tailscale-mcp-server",
+      "env": {
+        "TAILSCALE_API_KEY": "your-api-key-here",
+        "TAILSCALE_TAILNET": "your-tailnet-name",
+        "LOG_LEVEL": "0"
+      }
+    }
+  }
+}
+```
+
+### Development Commands
+
+```bash
+# Build for development
+npm run build:dev
+
+# Build and watch for changes
+npm run build:watch
+
+# Run in development mode with auto-restart
+npm run dev
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Test with MCP Inspector
+npm run inspector
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+```
+
+### Docker Development
+
+For Docker-based development:
+
+```bash
+# Build development image
+docker build -t tailscale-mcp-dev .
+
+# Run with development environment
+docker run -it --rm \
+  -v $(pwd):/app \
+  -v /app/node_modules \
+  -e TAILSCALE_API_KEY=your_api_key \
+  -e TAILSCALE_TAILNET=your_tailnet \
+  -e LOG_LEVEL=0 \
+  tailscale-mcp-dev
+
+# Or use Docker Compose for development
+docker-compose -f docker-compose.dev.yml up
+```
 
 ### Project Structure
 
@@ -194,33 +331,27 @@ import { myTools } from "./tools/my-tools.js";
 this.toolRegistry.registerModule(myTools);
 ```
 
-### Testing
+### Debugging
+
+Enable debug logging for development:
 
 ```bash
-# Run tests
-npm test
+# Set environment variable
+export LOG_LEVEL=0
 
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-
-# Test with MCP Inspector
-npm run inspector
+# Or in .env file
+LOG_LEVEL=0
+MCP_SERVER_LOG_FILE=debug-{timestamp}.log
 ```
 
-### Building
+View logs in real-time:
 
 ```bash
-# Build for production
-npm run build
+# Follow server logs
+tail -f logs/debug-*.log
 
-# Build for development
-npm run build:dev
-
-# Build and watch for changes
-npm run build:watch
+# Or use Docker logs
+docker-compose logs -f tailscale-mcp
 ```
 
 ## API Reference

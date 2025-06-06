@@ -67,7 +67,53 @@ export class TailscaleMCPServer {
 
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    logger.info("Tailscale MCP Server started successfully");
+
+    // Keep the process alive - different strategies for different environments
+    if (process.stdin.isTTY) {
+      // Interactive terminal - use stdin
+      logger.debug("Interactive terminal detected, using stdin for keepalive");
+      process.stdin.resume();
+      process.stdin.setEncoding("utf8");
+
+      process.stdin.on("end", () => {
+        logger.info("stdin closed, shutting down MCP server");
+        process.exit(0);
+      });
+
+      process.stdin.on("error", (error) => {
+        logger.error("stdin error:", error);
+        process.exit(1);
+      });
+    } else {
+      // Non-interactive (Docker) - use interval keepalive
+      logger.debug(
+        "Non-interactive environment detected, using interval keepalive"
+      );
+      const keepAliveInterval = setInterval(() => {
+        logger.debug("MCP Server keepalive heartbeat");
+      }, 30000); // 30 second heartbeat
+
+      // Store interval reference for cleanup
+      process.on("exit", () => {
+        clearInterval(keepAliveInterval);
+      });
+    }
+
+    // Handle process termination gracefully
+    const cleanup = () => {
+      logger.info("MCP Server shutting down...");
+      if (process.stdin.isTTY) {
+        process.stdin.pause();
+      }
+      process.exit(0);
+    };
+
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
+
+    logger.info(
+      "Tailscale MCP Server started successfully and listening for MCP messages"
+    );
   }
 }
 
