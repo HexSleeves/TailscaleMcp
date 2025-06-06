@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 // Tailscale Device Schema
 export const TailscaleDeviceSchema = z.object({
@@ -24,7 +24,7 @@ export const TailscaleDeviceSchema = z.object({
       endpoints: z.array(z.string()),
       derp: z.string(),
       mappingVariesByDestIP: z.boolean(),
-      latency: z.record(z.number()).optional(),
+      latency: z.record(z.string(), z.number()).optional(),
       clientSupports: z.object({
         hairPinning: z.boolean(),
         ipv6: z.boolean(),
@@ -75,6 +75,7 @@ export const TailscaleCLIStatusSchema = z.object({
   }),
   Peer: z
     .record(
+      z.string(),
       z.object({
         ID: z.string(),
         PublicKey: z.string(),
@@ -153,8 +154,8 @@ export const ACLRuleSchema = z.object({
 });
 
 export const ACLConfigSchema = z.object({
-  groups: z.record(z.array(z.string())).optional(),
-  tagOwners: z.record(z.array(z.string())).optional(),
+  groups: z.record(z.string(), z.array(z.string())).optional(),
+  tagOwners: z.record(z.string(), z.array(z.string())).optional(),
   acls: z.array(ACLRuleSchema),
   tests: z.array(z.any()).optional(),
   ssh: z.array(z.any()).optional(),
@@ -167,7 +168,7 @@ export const DNSConfigSchema = z.object({
   nameservers: z
     .object({
       global: z.array(z.string()).optional(),
-      restricted: z.record(z.array(z.string())).optional(),
+      restricted: z.record(z.string(), z.array(z.string())).optional(),
     })
     .optional(),
 });

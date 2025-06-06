@@ -1,5 +1,5 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { logger } from "../logger.js";
 import type { ToolContext, ToolModule } from "./index.js";
 
@@ -20,8 +20,14 @@ const ACLSchema = z.object({
         )
         .optional()
         .describe("Access control rules"),
-      groups: z.record(z.any()).optional().describe("User groups definition"),
-      tagOwners: z.record(z.any()).optional().describe("Tag ownership mapping"),
+      groups: z
+        .record(z.string(), z.array(z.string()))
+        .optional()
+        .describe("User groups definition"),
+      tagOwners: z
+        .record(z.string(), z.array(z.string()))
+        .optional()
+        .describe("Tag ownership mapping"),
     })
     .optional()
     .describe("ACL configuration (required for update/validate operations)"),

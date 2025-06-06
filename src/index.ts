@@ -2,6 +2,8 @@ import { startServer } from "./server.js";
 import { logger } from "./logger.js";
 import { fileURLToPath } from "node:url";
 
+import "dotenv/config";
+
 async function main() {
   try {
     logger.info("Starting Tailscale MCP Server...");
@@ -27,7 +29,6 @@ process.on("SIGTERM", () => {
   logger.info("Received SIGTERM, shutting down gracefully...");
   process.exit(0);
 });
-
 // Check if this file is being run directly (works in both ESM and CJS)
 const isMainModule = (() => {
   try {

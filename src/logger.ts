@@ -1,3 +1,5 @@
+import { writeFileSync, appendFileSync } from "fs";
+
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
@@ -7,13 +9,48 @@ export enum LogLevel {
 
 class Logger {
   private level: LogLevel;
+  private logFilePath: string | null = null;
 
   constructor(level: LogLevel = LogLevel.INFO) {
     this.level = level;
+
+    // Initialize file logging if environment variable is set
+    if (process.env.MCP_SERVER_LOG_FILE) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      this.logFilePath = process.env.MCP_SERVER_LOG_FILE.replace(
+        "{timestamp}",
+        timestamp
+      );
+
+      // Create initial log file with header
+      const header = `=== Tailscale MCP Server Log ===\nStarted: ${new Date().toISOString()}\nLog Level: ${
+        LogLevel[level]
+      }\n\n`;
+      try {
+        writeFileSync(this.logFilePath, header, "utf8");
+        console.info(`📝 Server logging to file: ${this.logFilePath}`);
+      } catch (error) {
+        console.error(`❌ Failed to create server log file: ${error}`);
+        this.logFilePath = null;
+      }
+    }
   }
 
   setLevel(level: LogLevel): void {
     this.level = level;
+    if (this.logFilePath) {
+      this.writeToFile(`Log level changed to: ${LogLevel[level]}`);
+    }
+  }
+
+  private writeToFile(message: string): void {
+    if (this.logFilePath) {
+      try {
+        appendFileSync(this.logFilePath, message + "\n", "utf8");
+      } catch (error) {
+        console.error(`❌ Failed to write to server log file: ${error}`);
+      }
+    }
   }
 
   private log(level: LogLevel, message: string, ...args: any[]): void {
@@ -21,7 +58,21 @@ class Logger {
       const timestamp = new Date().toISOString();
       const levelName = LogLevel[level];
       const prefix = `[${timestamp}] [${levelName}]`;
+      const fullMessage =
+        args.length > 0
+          ? `${message} ${args
+              .map((arg) =>
+                typeof arg === "object" ? JSON.stringify(arg) : String(arg)
+              )
+              .join(" ")}`
+          : message;
 
+      // Write to file first (without console formatting)
+      if (this.logFilePath) {
+        this.writeToFile(`${prefix} ${fullMessage}`);
+      }
+
+      // Then write to console
       switch (level) {
         case LogLevel.DEBUG:
           console.debug(prefix, message, ...args);

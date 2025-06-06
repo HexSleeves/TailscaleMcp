@@ -50,14 +50,21 @@ export class TailscaleMCPServer {
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      logger.info(`Calling tool: ${name}`, args);
-
       return await this.toolRegistry.callTool(name, args || {});
     });
   }
 
   async start(): Promise<void> {
     await this.initialize();
+
+    // Log server configuration
+    logger.info("Tailscale MCP Server starting...");
+    if (process.env.MCP_SERVER_LOG_FILE) {
+      logger.info("File logging enabled");
+    } else {
+      logger.debug("File logging disabled (set MCP_SERVER_LOG_FILE to enable)");
+    }
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     logger.info("Tailscale MCP Server started successfully");
