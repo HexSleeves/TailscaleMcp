@@ -24,6 +24,8 @@ env:
 # Grant minimum necessary permissions for the GITHUB_TOKEN
 permissions:
   contents: write
+  packages: write
+  id-token: write
 
 jobs:
   release:

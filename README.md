@@ -18,13 +18,13 @@ A modern [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server 
 Run directly without installation:
 
 ```bash
-npx -y @hexsleeve/tailscale-mcp-server
+npx -y @hexsleeves/tailscale-mcp-server
 ```
 
 Or install globally:
 
 ```bash
-npm install -g @hexsleeve/tailscale-mcp-server
+npm install -g @hexsleeves/tailscale-mcp-server
 tailscale-mcp-server
 ```
 
@@ -36,7 +36,7 @@ docker run -d \
   --name tailscale-mcp \
   -e TAILSCALE_API_KEY=your_api_key \
   -e TAILSCALE_TAILNET=your_tailnet \
-  ghcr.io/your-username/tailscale-mcp-server:latest
+  ghcr.io/hexsleeves/tailscale-mcp-server:latest
 
 # Or use Docker Compose
 docker-compose up -d
@@ -55,7 +55,7 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
   "mcpServers": {
     "tailscale": {
       "command": "npx",
-      "args": ["@hexsleeve/tailscale-mcp-server"],
+      "args": ["@hexsleeves/tailscale-mcp-server"],
       "env": {
         "TAILSCALE_API_KEY": "your-api-key-here",
         "TAILSCALE_TAILNET": "your-tailnet-name"
@@ -80,7 +80,7 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
         "TAILSCALE_API_KEY=your-api-key",
         "-e",
         "TAILSCALE_TAILNET=your-tailnet",
-        "ghcr.io/your-username/tailscale-mcp-server:latest"
+        "ghcr.io/hexsleeves/tailscale-mcp-server:latest"
       ]
     }
   }
@@ -143,7 +143,7 @@ For local development and testing, clone the repository and set up the developme
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/tailscale-mcp-server.git
+git clone https://github.com/HexSleeves/tailscale-mcp-server.git
 cd tailscale-mcp-server
 
 # Install dependencies

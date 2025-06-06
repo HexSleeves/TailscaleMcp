@@ -17,6 +17,9 @@ COPY . .
 # Run the build script to transpile TypeScript to JavaScript
 RUN npm run build
 
+# Remove dev dependencies
+RUN npm prune --production
+
 #
 # ---- Production Stage ----
 # This stage creates the final, lean image by copying only the

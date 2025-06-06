@@ -1,5 +1,5 @@
 {
-  "name": "@hexsleeve/tailscale-mcp-server",
+  "name": "@hexsleeves/tailscale-mcp-server",
   "version": "0.1.0",
   "description": "A Model Context Protocol (MCP) server that provides seamless integration with Tailscale's CLI commands and REST API, enabling automated network management and monitoring through a standardized interface.",
   "keywords": [
@@ -9,7 +9,7 @@
     "tailscale mcp",
     "tailscale mcp server"
   ],
-  "author": "HexSleeve",
+  "author": "HexSleeves",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",

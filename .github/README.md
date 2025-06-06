@@ -136,10 +136,19 @@ git push origin v1.0.0
 
 ```bash
 # Latest version
-docker pull ghcr.io/your-username/tailscale-mcp:latest
+
+# Pull from Docker Hub
+docker pull hexsleeves/tailscale-mcp-server
+docker pull ghcr.io/hexsleeves/tailscale-mcp-server:latest
+
 
 # Specific version
-docker pull ghcr.io/your-username/tailscale-mcp:v1.0.0
+
+# Pull from Docker Hub
+docker pull hexsleeves/tailscale-mcp-server:v1.0.0
+
+# Pull from GitHub Container Registry
+docker pull ghcr.io/hexsleeves/tailscale-mcp-server:v1.0.0
 ```
 
 ### Run Container
@@ -150,7 +159,7 @@ docker run -d \
   -e TAILSCALE_API_KEY=your_api_key \
   -e TAILSCALE_TAILNET=your_tailnet \
   -e LOG_LEVEL=1 \
-  ghcr.io/your-username/tailscale-mcp:latest
+  ghcr.io/hexsleeves/tailscale-mcp-server:latest
 ```
 
 ## 🔍 Monitoring and Maintenance
