@@ -20,11 +20,22 @@ fi
 
 # Copy example file
 echo "📋 Copying .env.example to .env..."
-cp .env.example .env
+if [ ! -f ".env.example" ]; then
+  echo "❌ Error: .env.example file not found!"
+  exit 1
+fi
+
+if ! cp .env.example .env; then
+  echo "❌ Error: Failed to copy .env.example to .env"
+  exit 1
+fi
 
 # Create logs directory
 echo "📁 Creating logs directory..."
-mkdir -p logs
+if ! mkdir -p logs; then
+  echo "❌ Error: Failed to create logs directory"
+  exit 1
+fi
 
 echo
 echo "✅ Environment setup complete!"
@@ -38,7 +49,7 @@ echo "2. Build the project:"
 echo "   npm run build"
 echo
 echo "3. Test the server:"
-echo "   node test-mcp-server.js"
+echo "   node scripts/test-mcp-server.js"
 echo
 echo "4. Or run with MCP Inspector:"
 echo "   npm run inspector"

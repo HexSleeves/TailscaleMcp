@@ -25,14 +25,14 @@
  *   - Optional file logging with timestamps
  */
 
-import { spawn } from "child_process";
-import { createInterface } from "readline";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { writeFileSync, appendFileSync } from "fs";
-
 // Load environment variables from .env file
 import "dotenv/config";
+
+import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { writeFileSync, appendFileSync } from "node:fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -113,13 +113,13 @@ class TailscaleMCPTester {
       // Read timeout from environment variable, fallback to 10000 ms
       let timeoutMs = 10000;
       if (process.env.MCP_START_TIMEOUT) {
-        const parsed = parseInt(process.env.MCP_START_TIMEOUT, 10);
-        if (!isNaN(parsed) && parsed > 0) {
+        const parsed = Number.parseInt(process.env.MCP_START_TIMEOUT, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
           timeoutMs = parsed;
         }
       }
 
-      let initTimeout = setTimeout(() => {
+      const initTimeout = setTimeout(() => {
         reject(new Error("Server initialization timeout"));
       }, timeoutMs);
 
@@ -166,7 +166,7 @@ class TailscaleMCPTester {
         params,
       };
 
-      const requestStr = JSON.stringify(request) + "\n";
+      const requestStr = `${JSON.stringify(request)}\n`;
 
       let responseData = "";
       let responseTimeout = setTimeout(() => {

@@ -63,13 +63,13 @@ node test-mcp-server.js
 
 #### 1. Get Tailscale Version
 
-```
+```text
 Select option: 2
 ```
 
 Output:
 
-```
+```text
 ✅ Tool Result:
 Tailscale version information:
 
@@ -81,14 +81,14 @@ Tailscale version information:
 
 #### 2. Network Status (Summary Format)
 
-```
+```text
 Select option: 3
 Format (json/summary) [summary]: summary
 ```
 
 #### 3. List All Devices
 
-```
+```text
 Select option: 4
 ```
 
@@ -96,7 +96,7 @@ Select option: 4
 
 #### 4. Custom Tool Call Example
 
-```
+```text
 Select option: 7
 Enter tool name: device_action
 Enter arguments as JSON: {"deviceId": "your-device-id", "action": "authorize"}
@@ -104,7 +104,7 @@ Enter arguments as JSON: {"deviceId": "your-device-id", "action": "authorize"}
 
 #### 5. Ping a Peer
 
-```
+```text
 Select option: 5
 Enter target hostname or IP: peer-hostname
 Number of pings [4]: 3
@@ -295,7 +295,7 @@ this.serverProcess.stderr.on("data", (data) => {
 
 ### Communication Flow
 
-```
+```text
 Test Script → JSON-RPC Request → MCP Server → Tailscale CLI/API → Response → Formatted Output
 ```
 

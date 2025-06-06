@@ -1,8 +1,7 @@
+import "dotenv/config";
 import { startServer } from "./server.js";
 import { logger } from "./logger.js";
 import { fileURLToPath } from "node:url";
-
-import "dotenv/config";
 
 async function main() {
   try {
@@ -10,25 +9,38 @@ async function main() {
     await startServer();
   } catch (error) {
     logger.error("Failed to start server:", error);
-    process.exit(1);
+    await gracefulShutdown(1);
   }
 }
 
-process.on("unhandledRejection", (err) => {
+async function gracefulShutdown(exitCode: number = 0): Promise<void> {
+  try {
+    logger.info("Flushing logs before shutdown...");
+    await logger.flush();
+    await logger.close();
+  } catch (error) {
+    console.error("Error during graceful shutdown:", error);
+  } finally {
+    process.exit(exitCode);
+  }
+}
+
+process.on("unhandledRejection", async (err) => {
   logger.error("Unhandled rejection:", err);
-  process.exit(1);
+  await gracefulShutdown(1);
 });
 
 // Handle graceful shutdown
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   logger.info("Received SIGINT, shutting down gracefully...");
-  process.exit(0);
+  await gracefulShutdown(0);
 });
 
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   logger.info("Received SIGTERM, shutting down gracefully...");
-  process.exit(0);
+  await gracefulShutdown(0);
 });
+
 // Check if this file is being run directly (works in both ESM and CJS)
 const isMainModule = (() => {
   try {
@@ -44,8 +56,8 @@ const isMainModule = (() => {
 })();
 
 if (isMainModule) {
-  main().catch((error) => {
+  main().catch(async (error) => {
     logger.error("Unhandled error:", error);
-    process.exit(1);
+    await gracefulShutdown(1);
   });
 }
