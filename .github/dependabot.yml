@@ -6,6 +6,12 @@
 version: 2
 updates:
   - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+    directory: "/"            # Location of package manifests
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    allow:
+      - dependency-type: "all"
+        update-type: "all"
