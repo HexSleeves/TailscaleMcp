@@ -113,8 +113,8 @@ publish_npm() {
 build_docker() {
   local version="$1"
   local docker_name="$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO"
-  print_status "Building Docker image: $docker_name:$new_version"
-  docker build -t "$docker_name:$new_version" -t "$docker_name:latest" .
+  print_status "Building Docker image: $docker_name:$version"
+  docker build -t "$docker_name:$version" -t "$docker_name:latest" .
   print_success "Built Docker image: $docker_name:$version"
 }
 

@@ -165,7 +165,7 @@ export class HttpMCPServer {
           "Bearer ",
           ""
         ) as string;
-        const clientIp = req.ip || req.connection.remoteAddress;
+        const clientIp = req.ip || req.socket.remoteAddress;
         const userAgent = req.headers["user-agent"];
 
         let sessionInfo: SessionInfo;
@@ -269,7 +269,7 @@ export class HttpMCPServer {
           "Bearer ",
           ""
         ) as string;
-        const clientIp = req.ip;
+        const clientIp = req.ip || req.socket.remoteAddress;
 
         if (!sessionId || !authToken) {
           res.status(400).json({

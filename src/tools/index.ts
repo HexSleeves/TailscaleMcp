@@ -82,7 +82,7 @@ export class ToolRegistry {
     try {
       const validatedArgs = tool.inputSchema.safeParse(args);
       if (!validatedArgs.success) {
-        logger.debug("Invalid arguments:", validatedArgs.error);
+        logger.warn("Invalid arguments:", validatedArgs.error);
 
         return {
           content: [

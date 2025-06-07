@@ -29,6 +29,9 @@ class Logger {
     if (process.env.MCP_SERVER_LOG_FILE) {
       let logPath = process.env.MCP_SERVER_LOG_FILE;
       if (!logPath) {
+        console.warn(
+          "Warning: MCP_SERVER_LOG_FILE is not set or is empty. File logging will be disabled."
+        );
         return;
       }
 

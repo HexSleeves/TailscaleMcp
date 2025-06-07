@@ -19,7 +19,7 @@ export class TailscaleMCPCLI {
   private parsePort(args: string[]): number | undefined {
     const portIndex = args.indexOf("--port");
     if (portIndex !== -1 && args[portIndex + 1]) {
-      const parsedPort = parseInt(args[portIndex + 1], 10);
+      const parsedPort = Number.parseInt(args[portIndex + 1], 10);
       if (!isNaN(parsedPort) && parsedPort >= 1 && parsedPort <= 65535) {
         return parsedPort;
       } else {
@@ -30,7 +30,6 @@ export class TailscaleMCPCLI {
         );
       }
     }
-
     return undefined;
   }
 
