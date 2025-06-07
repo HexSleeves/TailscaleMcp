@@ -279,8 +279,9 @@ export class TailscaleCLI {
       this.validateStringInput(options.authKey, "authKey");
       // Pass auth key directly as argument since execFile handles it securely
       // The auth key won't be exposed in shell command history
+      // Changed from info to debug
+      logger.debug("Auth key passed securely via execFile");
       args.push("--authkey", options.authKey);
-      logger.info("Auth key passed securely via execFile");
     }
 
     return await this.executeCommand(args);

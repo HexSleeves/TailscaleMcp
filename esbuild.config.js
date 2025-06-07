@@ -26,15 +26,12 @@ const baseConfig = {
   target: "node18",
   sourcemap: true,
   minify: false,
-  // External dependencies (don't bundle them)
   external: [
     ...Object.keys(packageJson.dependencies ?? {}),
     ...Object.keys(packageJson.peerDependencies ?? {}),
     ...Object.keys(packageJson.optionalDependencies ?? {}),
   ],
-  // Handle TypeScript path mapping
   resolveExtensions: [".ts", ".js"],
-  // Preserve JSX and other settings
   jsx: "preserve",
   // Define environment
   // NODE_ENV defined in specific configs
@@ -47,7 +44,7 @@ const esmConfig = {
   outfile: "dist/index.js",
   // Banner to add shebang for executable
   banner: {
-    js: `#!/usr/bin/env node\n// Tailscale MCP Server - Built with esbuild`,
+    js: "#!/usr/bin/env node\n// Tailscale MCP Server - Built with esbuild",
   },
 };
 
@@ -56,7 +53,6 @@ const cjsConfig = {
   ...baseConfig,
   format: "cjs",
   outfile: "dist/index.cjs",
-  // No shebang for CJS version as it's not the main executable
 };
 
 // Development configs

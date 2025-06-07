@@ -28,6 +28,9 @@ class Logger {
     // Initialize file logging if environment variable is set
     if (process.env.MCP_SERVER_LOG_FILE) {
       let logPath = process.env.MCP_SERVER_LOG_FILE;
+      if (!logPath) {
+        return;
+      }
 
       // If the log path contains {timestamp}, replace it with the timestamp
       if (logPath.includes("{timestamp}")) {
@@ -51,7 +54,7 @@ class Logger {
 
     try {
       await writeFile(this.logFilePath, header, "utf8");
-      console.info(`📝 Server logging to file: ${this.logFilePath}`);
+      console.debug(`📝 Server logging to file: ${this.logFilePath}`);
     } catch (error) {
       console.error(`❌ Failed to create server log file: ${error}`);
       this.logFilePath = null;

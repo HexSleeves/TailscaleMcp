@@ -10,6 +10,8 @@ import * as http from "node:http";
 import { logger } from "../logger.js";
 import { ToolRegistry } from "../tools/index.js";
 
+const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
 interface SessionInfo {
   transport: StreamableHTTPServerTransport;
   authToken: string;
@@ -189,7 +191,8 @@ export class HttpMCPServer {
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (newSessionId: string) => {
-              logger.info(
+              // Changed from info to debug
+              logger.debug(
                 `New authenticated session initialized: ${newSessionId} from IP ${clientIp}`
               );
 
@@ -266,7 +269,7 @@ export class HttpMCPServer {
           "Bearer ",
           ""
         ) as string;
-        const clientIp = req.ip || req.socket.remoteAddress;
+        const clientIp = req.ip;
 
         if (!sessionId || !authToken) {
           res.status(400).json({
@@ -307,7 +310,7 @@ export class HttpMCPServer {
   }
 
   async start(port: number): Promise<void> {
-    logger.info("Starting HTTP MCP server...");
+    logger.debug("Starting HTTP MCP server...");
 
     const app = express();
 
@@ -322,6 +325,7 @@ export class HttpMCPServer {
           : "*";
 
       res.header("Access-Control-Allow-Origin", allowedOrigin);
+      res.header("Access-Control-Allow-Credentials", "true");
       res.header(
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS"
@@ -343,20 +347,20 @@ export class HttpMCPServer {
     // Run cleanup every 15 minutes
     this.cleanupInterval = setInterval(
       () => this.cleanupExpiredSessions(),
-      15 * 60 * 1000
+      TIMEOUT_MS
     );
 
     // Start the HTTP server
     this.httpServer = app.listen(port, () => {
-      logger.info(`HTTP server listening on port ${port}`);
-      logger.info(`Health check: http://localhost:${port}/health`);
-      logger.info(`Tools list: http://localhost:${port}/tools`);
-      logger.info(`MCP endpoint: http://localhost:${port}/mcp`);
+      logger.debug(`HTTP server listening on port ${port}`);
+      logger.debug(`Health check: http://localhost:${port}/health`);
+      logger.debug(`Tools list: http://localhost:${port}/tools`);
+      logger.debug(`MCP endpoint: http://localhost:${port}/mcp`);
     });
 
     // Handle process termination gracefully
     const cleanup = async () => {
-      logger.info("HTTP MCP Server shutting down...");
+      logger.debug("HTTP MCP Server shutting down...");
       await this.stop();
       process.exit(0);
     };
@@ -364,7 +368,7 @@ export class HttpMCPServer {
     process.on("SIGINT", cleanup);
     process.on("SIGTERM", cleanup);
 
-    logger.info(
+    logger.debug(
       "HTTP MCP Server started successfully and listening for MCP messages"
     );
   }

@@ -113,8 +113,8 @@ publish_npm() {
 build_docker() {
   local version="$1"
   local docker_name="$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO"
-  print_status "Building Docker image: $docker_name:$version"
-  docker build -t "$docker_name:$version" -t "$docker_name:latest" .
+  print_status "Building Docker image: $docker_name:$new_version"
+  docker build -t "$docker_name:$new_version" -t "$docker_name:latest" .
   print_success "Built Docker image: $docker_name:$version"
 }
 
@@ -204,10 +204,17 @@ main() {
 
   echo ""
   print_status "Select a version bump type:"
+
+  # Pre-calculate version bumps to avoid repeated npx semver calls
+  local patch_ver minor_ver major_ver
+  patch_ver=$(npx semver "$current_version" -i patch)
+  minor_ver=$(npx semver "$current_version" -i minor)
+  major_ver=$(npx semver "$current_version" -i major)
+
   local options=(
-    "patch ($(npx semver "$current_version" -i patch))"
-    "minor ($(npx semver "$current_version" -i minor))"
-    "major ($(npx semver "$current_version" -i major))"
+    "patch ($patch_ver)"
+    "minor ($minor_ver)"
+    "major ($major_ver)"
     "prerelease"
     "custom"
     "skip"

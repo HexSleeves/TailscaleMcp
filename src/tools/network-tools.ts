@@ -56,7 +56,7 @@ async function getNetworkStatus(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Getting network status with format:", args.format);
+    logger.debug("Getting network status with format:", args.format);
 
     const result = await context.cli.getStatus();
 
@@ -159,7 +159,7 @@ async function connectNetwork(
       loginServer: args.loginServer,
     };
 
-    logger.info("Connecting to Tailscale network with options:", options);
+    logger.debug("Connecting to Tailscale network with options:", options);
 
     const result = await context.cli.up(options);
 
@@ -204,7 +204,7 @@ async function disconnectNetwork(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Disconnecting from Tailscale network");
+    logger.debug("Disconnecting from Tailscale network");
 
     const result = await context.cli.down();
 
@@ -249,7 +249,7 @@ async function pingPeer(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info(`Pinging ${args.target} (${args.count} packets)`);
+    logger.debug(`Pinging ${args.target} (${args.count} packets)`);
 
     const result = await context.cli.ping(args.target, args.count);
 
@@ -294,7 +294,7 @@ async function getVersion(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Getting Tailscale version");
+    logger.debug("Getting Tailscale version");
 
     const result = await context.cli.version();
 

@@ -33,7 +33,7 @@ async function listDevices(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Listing devices with options:", args);
+    logger.debug("Listing devices with options:", args);
 
     const result = await context.api.listDevices();
 
@@ -106,7 +106,7 @@ async function deviceAction(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Performing device action:", args);
+    logger.debug("Performing device action:", args);
 
     let result;
     switch (args.action) {
@@ -173,7 +173,7 @@ async function manageRoutes(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing routes:", args);
+    logger.debug("Managing routes:", args);
 
     let result;
     if (args.action === "enable") {

@@ -110,6 +110,8 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
         "-i",
         "-e",
         "TAILSCALE_API_KEY=xxxxxxxxxxxxx",
+        "-e",
+        "TAILSCALE_TAILNET=your-tailnet",
         "hexsleeves/tailscale-mcp-server:latest"
       ]
     }
@@ -130,6 +132,8 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
         "-i",
         "-e",
         "TAILSCALE_API_KEY=xxxxxxxxxxxxx",
+        "-e",
+        "TAILSCALE_TAILNET=your-tailnet",
         "ghcr.io/hexsleeves/tailscale-mcp-server:latest"
       ]
     }
@@ -315,6 +319,7 @@ The script will guide you through:
 - **Safety checks** for uncommitted changes
 - **Colored output** for better visibility
 - **Error handling** with proper exit codes
+- **Performance optimized** with pre-calculated version previews
 
 #### Prerequisites for Publishing
 

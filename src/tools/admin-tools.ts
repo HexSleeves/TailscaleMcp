@@ -146,7 +146,7 @@ async function getTailnetInfo(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Getting tailnet information:", args);
+    logger.debug("Getting tailnet information:", args);
 
     const result = await context.api.getDetailedTailnetInfo();
     if (!result.success) {
@@ -212,7 +212,7 @@ async function manageFileSharing(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing file sharing:", args);
+    logger.debug("Managing file sharing:", args);
 
     switch (args.operation) {
       case "get_status": {
@@ -313,7 +313,7 @@ async function manageExitNodes(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing exit nodes:", args);
+    logger.debug("Managing exit nodes:", args);
 
     switch (args.operation) {
       case "list": {
@@ -477,7 +477,7 @@ async function manageWebhooks(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing webhooks:", args);
+    logger.debug("Managing webhooks:", args);
 
     switch (args.operation) {
       case "list": {
@@ -664,7 +664,7 @@ async function manageDeviceTags(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing device tags:", args);
+    logger.debug("Managing device tags:", args);
 
     switch (args.operation) {
       case "get_tags": {

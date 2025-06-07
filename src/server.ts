@@ -1,8 +1,9 @@
 import "dotenv/config";
-import { createTailscaleAPI } from "./tailscale/index.js";
-import { ToolRegistry } from "./tools/index.js";
-import { StdioMCPServer, HttpMCPServer } from "./servers/index.js";
 import { logger } from "./logger.js";
+import { HttpMCPServer, StdioMCPServer } from "./servers/index.js";
+import { createTailscaleAPI } from "./tailscale/index.js";
+import { TailscaleCLI } from "./tailscale/tailscale-cli.js";
+import { ToolRegistry } from "./tools/index.js";
 
 export type ServerMode = "stdio" | "http";
 
@@ -11,21 +12,18 @@ export class TailscaleMCPServer {
   private stdioServer?: StdioMCPServer;
   private httpServer?: HttpMCPServer;
 
-  constructor() {
-    // Constructor is now lightweight - initialization happens in start()
-  }
-
   async initialize(): Promise<void> {
     logger.info("Initializing Tailscale MCP Server...");
 
     // Initialize Tailscale integrations
     const api = createTailscaleAPI();
+    const cli = new TailscaleCLI();
 
     // Create tool registry and register tool modules
-    this.toolRegistry = new ToolRegistry({ api });
+    this.toolRegistry = new ToolRegistry({ api, cli });
     await this.toolRegistry.loadTools();
 
-    logger.info(`Loaded ${this.toolRegistry.getTools().length} tools`);
+    logger.debug(`Loaded ${this.toolRegistry.getTools().length} tools`);
   }
 
   async start(mode: ServerMode = "stdio", port?: number): Promise<void> {
@@ -34,7 +32,7 @@ export class TailscaleMCPServer {
     // Log server configuration
     logger.info(`Tailscale MCP Server starting in ${mode} mode...`);
     if (process.env.MCP_SERVER_LOG_FILE) {
-      logger.info("File logging enabled");
+      logger.debug("File logging enabled");
     } else {
       logger.debug("File logging disabled (set MCP_SERVER_LOG_FILE to enable)");
     }
@@ -62,13 +60,19 @@ export class TailscaleMCPServer {
     if (this.stdioServer) {
       await this.stdioServer.stop();
       this.stdioServer = undefined;
-    }
-
-    if (this.httpServer) {
+    } else if (this.httpServer) {
       await this.httpServer.stop();
       this.httpServer = undefined;
     }
 
+    // Dispose of ToolRegistry resources
+    if (this.toolRegistry) {
+      await this.toolRegistry.dispose();
+    }
+
     logger.info("Tailscale MCP Server stopped");
+
+    // Close logger last to ensure all log messages are written
+    await logger.close();
   }
 }

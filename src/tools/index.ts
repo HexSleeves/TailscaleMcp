@@ -1,6 +1,7 @@
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod/v4";
 import { TailscaleAPI } from "../tailscale/tailscale-api.js";
+import { TailscaleCLI } from "../tailscale/tailscale-cli.js";
 
 // Import all tool modules
 import { logger } from "../logger.js";
@@ -11,7 +12,7 @@ import { networkTools } from "./network-tools.js";
 
 export interface ToolContext {
   api: TailscaleAPI;
-  // cli: TailscaleCLI;
+  cli: TailscaleCLI;
 }
 
 export interface ToolDefinition {
@@ -35,7 +36,7 @@ export class ToolRegistry {
   }
 
   async loadTools(): Promise<void> {
-    logger.info("Loading tools...");
+    logger.debug("Loading tools...");
 
     // Register all tool modules
     this.registerModule(deviceTools);
@@ -43,7 +44,7 @@ export class ToolRegistry {
     this.registerModule(aclTools);
     this.registerModule(adminTools);
 
-    logger.info(`Loaded ${this.tools.size} tools`);
+    logger.debug(`Loaded ${this.tools.size} tools`);
   }
 
   register(tool: ToolDefinition): void {
@@ -81,7 +82,7 @@ export class ToolRegistry {
     try {
       const validatedArgs = tool.inputSchema.safeParse(args);
       if (!validatedArgs.success) {
-        logger.info("Invalid arguments:", validatedArgs.error);
+        logger.debug("Invalid arguments:", validatedArgs.error);
 
         return {
           content: [
@@ -103,6 +104,23 @@ export class ToolRegistry {
         isError: true,
       };
     }
+  }
+
+  /**
+   * Dispose of resources held by the ToolRegistry and its context
+   */
+  async dispose(): Promise<void> {
+    logger.debug("Disposing ToolRegistry resources...");
+
+    // Clear the tools map
+    this.tools.clear();
+
+    // Note: TailscaleAPI uses Axios which doesn't require explicit cleanup
+    // as it doesn't maintain persistent connections by default.
+    // If in the future the API client maintains persistent connections,
+    // we would add cleanup logic here.
+
+    logger.debug("ToolRegistry resources disposed");
   }
 }
 

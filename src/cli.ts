@@ -10,9 +10,28 @@ export interface CLIOptions {
 
 export class TailscaleMCPCLI {
   private options: CLIOptions;
+  private server?: TailscaleMCPServer;
 
   constructor() {
     this.options = this.parseArguments();
+  }
+
+  private parsePort(args: string[]): number | undefined {
+    const portIndex = args.indexOf("--port");
+    if (portIndex !== -1 && args[portIndex + 1]) {
+      const parsedPort = parseInt(args[portIndex + 1], 10);
+      if (!isNaN(parsedPort) && parsedPort >= 1 && parsedPort <= 65535) {
+        return parsedPort;
+      } else {
+        throw new Error(
+          `Invalid port number: ${
+            args[portIndex + 1]
+          }. Port must be between 1 and 65535.`
+        );
+      }
+    }
+
+    return undefined;
   }
 
   private parseArguments(): CLIOptions {
@@ -29,21 +48,7 @@ export class TailscaleMCPCLI {
     // Check for --http flag
     if (args.includes("--http")) {
       mode = "http";
-
-      // Check for --port flag
-      const portIndex = args.indexOf("--port");
-      if (portIndex !== -1 && args[portIndex + 1]) {
-        const parsedPort = parseInt(args[portIndex + 1], 10);
-        if (!isNaN(parsedPort) && parsedPort >= 1 && parsedPort <= 65535) {
-          port = parsedPort;
-        } else {
-          throw new Error(
-            `Invalid port number: ${
-              args[portIndex + 1]
-            }. Port must be between 1 and 65535.`
-          );
-        }
-      }
+      port = this.parsePort(args) ?? 3000;
     }
 
     return { mode, port, help };
@@ -87,9 +92,11 @@ Environment Variables:
         process.exit(0);
       }
 
-      logger.info("Starting Tailscale MCP Server...");
-      const server = new TailscaleMCPServer();
-      await server.start(this.options.mode, this.options.port);
+      this.setupSignalHandlers();
+
+      logger.debug("Starting Tailscale MCP Server...");
+      this.server = new TailscaleMCPServer();
+      await this.server.start(this.options.mode, this.options.port);
     } catch (error) {
       logger.error("Failed to start server:", error);
       await this.gracefulShutdown(1);
@@ -98,7 +105,9 @@ Environment Variables:
 
   private async gracefulShutdown(exitCode: number = 0): Promise<void> {
     try {
-      logger.info("Flushing logs before shutdown...");
+      await this.server?.stop();
+
+      logger.debug("Flushing logs before shutdown...");
       await logger.flush();
       await logger.close();
     } catch (error) {
@@ -116,7 +125,7 @@ Environment Variables:
 
     // Handle graceful shutdown
     process.on("SIGINT", () => {
-      logger.info("Received SIGINT, shutting down gracefully...");
+      logger.debug("Received SIGINT, shutting down gracefully...");
       this.gracefulShutdown(0).catch((error) => {
         console.error("Error during SIGINT shutdown:", error);
         process.exit(1);
@@ -124,7 +133,7 @@ Environment Variables:
     });
 
     process.on("SIGTERM", () => {
-      logger.info("Received SIGTERM, shutting down gracefully...");
+      logger.debug("Received SIGTERM, shutting down gracefully...");
       this.gracefulShutdown(0).catch((error) => {
         console.error("Error during SIGTERM shutdown:", error);
         process.exit(1);

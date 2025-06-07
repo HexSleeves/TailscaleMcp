@@ -126,7 +126,7 @@ async function manageACL(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing ACL configuration:", args);
+    logger.debug("Managing ACL configuration:", args);
 
     switch (args.operation) {
       case "get": {
@@ -243,7 +243,7 @@ async function manageDNS(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing DNS configuration:", args);
+    logger.debug("Managing DNS configuration:", args);
 
     switch (args.operation) {
       case "get_nameservers": {
@@ -467,7 +467,7 @@ async function manageKeys(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing authentication keys:", args);
+    logger.debug("Managing authentication keys:", args);
 
     switch (args.operation) {
       case "list": {
@@ -618,7 +618,7 @@ async function manageNetworkLock(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing network lock:", args);
+    logger.debug("Managing network lock:", args);
 
     switch (args.operation) {
       case "status": {
@@ -726,7 +726,7 @@ async function managePolicyFile(
   context: ToolContext
 ): Promise<CallToolResult> {
   try {
-    logger.info("Managing policy file:", args);
+    logger.debug("Managing policy file:", args);
 
     switch (args.operation) {
       case "get": {
