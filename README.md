@@ -90,9 +90,13 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
     "tailscale": {
       "command": "docker",
       "args": [
-        "run", "--rm", "-i",
-        "-e", "TAILSCALE_API_KEY=your-api-key",
-        "-e", "TAILSCALE_TAILNET=your-tailnet",
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "TAILSCALE_API_KEY=your-api-key",
+        "-e",
+        "TAILSCALE_TAILNET=your-tailnet",
         "ghcr.io/hexsleeves/tailscale-mcp-server:latest"
       ]
     }
@@ -102,15 +106,15 @@ Add to your Claude Desktop configuration (`~/.claude/claude_desktop_config.json`
 
 ### Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `TAILSCALE_API_KEY` | Tailscale API key | Yes* | - |
-| `TAILSCALE_TAILNET` | Tailscale tailnet name | Yes* | - |
-| `TAILSCALE_API_BASE_URL` | API base URL | No | `https://api.tailscale.com` |
-| `LOG_LEVEL` | Logging level (0-3) | No | `1` (INFO) |
-| `MCP_SERVER_LOG_FILE` | Server log file path | No | - |
+| Variable                 | Description            | Required | Default                     |
+| ------------------------ | ---------------------- | -------- | --------------------------- |
+| `TAILSCALE_API_KEY`      | Tailscale API key      | Yes\*    | -                           |
+| `TAILSCALE_TAILNET`      | Tailscale tailnet name | Yes\*    | -                           |
+| `TAILSCALE_API_BASE_URL` | API base URL           | No       | `https://api.tailscale.com` |
+| `LOG_LEVEL`              | Logging level (0-3)    | No       | `1` (INFO)                  |
+| `MCP_SERVER_LOG_FILE`    | Server log file path   | No       | -                           |
 
-*Required for API-based operations. CLI operations work without API credentials.
+\*Required for API-based operations. CLI operations work without API credentials.
 
 ## Available Tools
 
@@ -193,13 +197,10 @@ npm run inspector         # Test with MCP Inspector
 ```
 
 > **📖 For comprehensive development guides, testing strategies, and CI/CD information:**
+>
 > - **[Testing Documentation](src/__test__/README.md)** - Unit tests, integration tests, coverage
 > - **[Docker Development](docs/docker.md)** - Container-based development workflows
 > - **[CI/CD Workflows](docs/workflows.md)** - GitHub Actions, automation, releases
-
-
-
-
 
 ### Project Structure
 
@@ -233,16 +234,19 @@ tail -f logs/debug-*.log
 ### Tool Categories
 
 #### Device Tools
+
 - Device listing and filtering
 - Device authorization management
 - Route management per device
 
 #### Network Tools
+
 - Network status monitoring
 - Connection management
 - Peer connectivity testing
 
 #### Security Tools
+
 - ACL management
 - Device tagging
 - Network lock operations

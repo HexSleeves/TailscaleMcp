@@ -12,7 +12,7 @@ The project follows a **separation of concerns** testing strategy:
 
 ## Test Structure
 
-```
+```bash
 src/__test__/
 ├── README.md                           # This documentation
 ├── setup.ts                           # Global test setup
@@ -29,12 +29,14 @@ src/__test__/
 ## Test Configurations
 
 ### Base Configuration (`jest.config.ts`)
+
 - **Purpose**: Default configuration for all tests
 - **Coverage**: Comprehensive coverage reporting
 - **Timeout**: 15 seconds for integration tests
 - **Environment**: Node.js with ESM support
 
 ### Unit Test Configuration (`jest.config.unit.ts`)
+
 - **Purpose**: Fast, isolated component testing
 - **Pattern**: `**/*.test.ts` (excludes integration tests)
 - **Requirements**: No external dependencies
@@ -42,6 +44,7 @@ src/__test__/
 - **Coverage**: Business logic, utilities, pure functions
 
 ### Integration Test Configuration (`jest.config.integration.ts`)
+
 - **Purpose**: End-to-end testing with real Tailscale CLI
 - **Pattern**: `**/*.integration.test.ts`
 - **Requirements**: Tailscale CLI installed
@@ -83,16 +86,19 @@ npm run test:integration:ci
 #### Prerequisites for Integration Tests
 
 **macOS:**
+
 ```bash
 brew install tailscale
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
 ```
 
 **Verification:**
+
 ```bash
 tailscale version
 ```
@@ -119,6 +125,7 @@ export TAILSCALE_TEST_MODE="ci"
 **Purpose**: Test individual components in isolation
 
 #### Characteristics
+
 - ✅ **Fast execution** (< 1 second per test)
 - ✅ **No external dependencies**
 - ✅ **Deterministic results**
@@ -126,6 +133,7 @@ export TAILSCALE_TEST_MODE="ci"
 - ✅ **Cross-platform compatibility**
 
 #### Example Structure
+
 ```typescript
 // src/__test__/utils/logger.test.ts
 import { Logger } from "../../logger";
@@ -144,6 +152,7 @@ describe("Logger", () => {
 **Purpose**: Test real Tailscale CLI integration
 
 #### Characteristics
+
 - ⏱️ **Slower execution** (may take several seconds)
 - 🔧 **Requires Tailscale CLI**
 - 🔒 **Security validation**
@@ -151,6 +160,7 @@ describe("Logger", () => {
 - 🧪 **End-to-end workflows**
 
 #### Example Structure
+
 ```typescript
 // src/__test__/tailscale/cli-security.integration.test.ts
 import { TailscaleCLI } from "../../tailscale/tailscale-cli";
@@ -168,6 +178,7 @@ describe("TailscaleCLI Security", () => {
 ### Global Setup
 
 #### `setup.ts`
+
 - **Purpose**: Common setup for all tests
 - **Features**:
   - Environment variable configuration
@@ -175,6 +186,7 @@ describe("TailscaleCLI Security", () => {
   - Mock configurations
 
 #### `setup.integration.ts`
+
 - **Purpose**: Integration-specific setup
 - **Features**:
   - Tailscale CLI availability checking
@@ -206,11 +218,11 @@ global.integrationTestUtils.skipIfCIWithoutAuth()("should test API", () => {
 
 ### Coverage Targets
 
-| Test Type | Target | Focus |
-|-----------|--------|-------|
-| Unit | 90%+ | Business logic, utilities |
-| Integration | 70%+ | CLI integration, security |
-| Combined | 85%+ | Overall project coverage |
+| Test Type   | Target | Focus                     |
+| ----------- | ------ | ------------------------- |
+| Unit        | 90%+   | Business logic, utilities |
+| Integration | 70%+   | CLI integration, security |
+| Combined    | 85%+   | Overall project coverage  |
 
 ### Coverage Configuration
 
@@ -219,8 +231,8 @@ global.integrationTestUtils.skipIfCIWithoutAuth()("should test API", () => {
 collectCoverageFrom: [
   "src/**/*.ts",
   "!src/**/*.d.ts",
-  "!src/index.ts"  // Entry point excluded
-]
+  "!src/index.ts", // Entry point excluded
+];
 ```
 
 ### Coverage Reports
@@ -236,11 +248,13 @@ collectCoverageFrom: [
 The testing strategy integrates with GitHub Actions workflows:
 
 #### Unit Tests
+
 - **Matrix**: Node.js 18, 20, 22
 - **Speed**: Fast feedback on all platforms
 - **Coverage**: Uploaded to Codecov
 
 #### Integration Tests
+
 - **Environment**: Ubuntu with Tailscale CLI
 - **Authentication**: Optional via `TAILSCALE_AUTH_KEY`
 - **Cleanup**: Automatic Tailscale logout/cleanup
@@ -300,7 +314,7 @@ describe("Tailscale CLI Integration", () => {
     "should execute CLI commands safely",
     async () => {
       // Test implementation
-    }
+    },
   );
 });
 ```
@@ -326,6 +340,7 @@ npm run test:integration -- --testNamePattern="security"
 ### Common Issues
 
 #### Integration Tests Skipped
+
 ```bash
 # Check Tailscale CLI installation
 which tailscale
@@ -336,6 +351,7 @@ tailscale status
 ```
 
 #### Coverage Issues
+
 ```bash
 # Generate detailed coverage report
 npm run test:coverage
@@ -345,6 +361,7 @@ open coverage/lcov-report/index.html
 ```
 
 #### Test Timeouts
+
 ```bash
 # Increase timeout for specific tests
 test("slow test", async () => {
@@ -371,18 +388,21 @@ test("slow test", async () => {
 ## Best Practices
 
 ### Test Organization
+
 1. **Mirror Structure**: Test files mirror source structure
 2. **Clear Naming**: Use descriptive test and file names
 3. **Logical Grouping**: Group related tests in describe blocks
 4. **Setup/Teardown**: Use appropriate Jest lifecycle hooks
 
 ### Test Quality
+
 1. **Single Responsibility**: One concept per test
 2. **Readable Assertions**: Clear, descriptive expectations
 3. **Error Testing**: Test both success and failure cases
 4. **Documentation**: Comment complex test logic
 
 ### Maintenance
+
 1. **Regular Updates**: Keep test dependencies current
 2. **Coverage Monitoring**: Track coverage trends
 3. **Performance Monitoring**: Watch for slow tests
@@ -406,4 +426,4 @@ test("slow test", async () => {
 - [ ] Security considerations addressed
 - [ ] Documentation updated if needed
 
-For more information about Jest testing framework, see the [Jest documentation](https://jestjs.io/docs/getting-started).
+For more information about the Jest testing framework, see the [Jest documentation](https://jestjs.io/docs/getting-started).

@@ -5,6 +5,7 @@ This documentation covers Docker containerization for the Tailscale MCP Server, 
 ## Overview
 
 The project uses a **multi-stage Docker build** strategy optimized for:
+
 - **Security**: Non-root user, minimal attack surface
 - **Performance**: Optimized layer caching and minimal image size
 - **Reliability**: Health checks and proper signal handling
@@ -40,6 +41,7 @@ FROM node:20-alpine AS production
 ### Using Pre-built Images
 
 #### GitHub Container Registry (Recommended)
+
 ```bash
 docker run -d \
   --name tailscale-mcp \
@@ -49,6 +51,7 @@ docker run -d \
 ```
 
 #### Docker Hub
+
 ```bash
 docker run -d \
   --name tailscale-mcp \
@@ -60,12 +63,14 @@ docker run -d \
 ### Using Docker Compose
 
 #### Production Deployment
+
 ```bash
 # Use the included docker-compose.yml
 docker-compose up -d
 ```
 
 #### Development Environment
+
 ```bash
 # Create development compose file
 docker-compose -f docker-compose.dev.yml up
@@ -75,20 +80,21 @@ docker-compose -f docker-compose.dev.yml up
 
 ### Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `TAILSCALE_API_KEY` | Tailscale API key | Yes* | - |
-| `TAILSCALE_TAILNET` | Tailscale tailnet name | Yes* | - |
-| `TAILSCALE_API_BASE_URL` | API base URL | No | `https://api.tailscale.com` |
-| `LOG_LEVEL` | Logging level (0-3) | No | `1` (INFO) |
-| `MCP_SERVER_LOG_FILE` | Server log file path | No | - |
-| `NODE_ENV` | Node environment | No | `production` |
+| Variable                 | Description            | Required | Default                     |
+| ------------------------ | ---------------------- | -------- | --------------------------- |
+| `TAILSCALE_API_KEY`      | Tailscale API key      | Yes\*    | -                           |
+| `TAILSCALE_TAILNET`      | Tailscale tailnet name | Yes\*    | -                           |
+| `TAILSCALE_API_BASE_URL` | API base URL           | No       | `https://api.tailscale.com` |
+| `LOG_LEVEL`              | Logging level (0-3)    | No       | `1` (INFO)                  |
+| `MCP_SERVER_LOG_FILE`    | Server log file path   | No       | -                           |
+| `NODE_ENV`               | Node environment       | No       | `production`                |
 
-*Required for API-based operations. CLI operations work without API credentials.
+\*Required for API-based operations. CLI operations work without API credentials.
 
 ### Volume Mounts
 
 #### Log Persistence
+
 ```bash
 docker run -d \
   --name tailscale-mcp \
@@ -98,6 +104,7 @@ docker run -d \
 ```
 
 #### Development Volume Mounting
+
 ```bash
 docker run -it --rm \
   -v $(pwd):/app \
@@ -148,7 +155,7 @@ services:
   tailscale-mcp-dev:
     build:
       context: .
-      target: builder  # Use builder stage for development
+      target: builder # Use builder stage for development
     container_name: tailscale-mcp-dev
     volumes:
       - .:/app
@@ -156,11 +163,11 @@ services:
     environment:
       - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
       - TAILSCALE_TAILNET=${TAILSCALE_TAILNET}
-      - LOG_LEVEL=0  # Debug logging
+      - LOG_LEVEL=0 # Debug logging
       - NODE_ENV=development
     command: npm run dev:watch
     ports:
-      - "3000:3000"  # Expose for debugging
+      - "3000:3000" # Expose for debugging
 ```
 
 ## Building Images
@@ -205,6 +212,7 @@ docker buildx build \
 ### Local Development with Docker
 
 #### Option 1: Volume Mounting
+
 ```bash
 # Mount source code for live development
 docker run -it --rm \
@@ -218,12 +226,14 @@ docker run -it --rm \
 ```
 
 #### Option 2: Development Container
+
 ```bash
 # Use development compose configuration
 docker-compose -f docker-compose.dev.yml up
 ```
 
 #### Option 3: Interactive Development
+
 ```bash
 # Start interactive container
 docker run -it --rm \
@@ -240,6 +250,7 @@ npm run dev
 ### Testing in Docker
 
 #### Unit Tests
+
 ```bash
 docker run --rm \
   -v $(pwd):/app \
@@ -249,6 +260,7 @@ docker run --rm \
 ```
 
 #### Integration Tests (with Tailscale CLI)
+
 ```bash
 # Build test image with Tailscale CLI
 docker build -f Dockerfile.test -t tailscale-mcp-test .
@@ -266,6 +278,7 @@ docker run --rm \
 ### Container Orchestration
 
 #### Docker Swarm
+
 ```yaml
 version: "3.8"
 
@@ -290,6 +303,7 @@ secrets:
 ```
 
 #### Kubernetes
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -306,28 +320,29 @@ spec:
         app: tailscale-mcp-server
     spec:
       containers:
-      - name: tailscale-mcp-server
-        image: ghcr.io/hexsleeves/tailscale-mcp-server:latest
-        env:
-        - name: TAILSCALE_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: tailscale-secrets
-              key: api-key
-        - name: TAILSCALE_TAILNET
-          value: "your-tailnet"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
+        - name: tailscale-mcp-server
+          image: ghcr.io/hexsleeves/tailscale-mcp-server:latest
+          env:
+            - name: TAILSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-secrets
+                  key: api-key
+            - name: TAILSCALE_TAILNET
+              value: "your-tailnet"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
 ```
 
 ### Health Monitoring
 
 #### Health Check Configuration
+
 ```bash
 # Custom health check
 docker run -d \
@@ -340,6 +355,7 @@ docker run -d \
 ```
 
 #### Monitoring Health Status
+
 ```bash
 # Check container health
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -353,6 +369,7 @@ docker inspect --format='{{json .State.Health}}' tailscale-mcp
 ### Container Security
 
 #### Non-Root Execution
+
 ```dockerfile
 # Dockerfile security configuration
 RUN addgroup -S appgroup -g 1001 && \
@@ -361,6 +378,7 @@ USER appuser
 ```
 
 #### Secrets Management
+
 ```bash
 # Use Docker secrets (recommended)
 echo "your-api-key" | docker secret create tailscale_api_key -
@@ -370,6 +388,7 @@ docker run --env-file .env.production ghcr.io/hexsleeves/tailscale-mcp-server:la
 ```
 
 #### Network Security
+
 ```bash
 # Run with custom network
 docker network create --driver bridge mcp-network
@@ -379,6 +398,7 @@ docker run --network mcp-network ghcr.io/hexsleeves/tailscale-mcp-server:latest
 ### Image Security
 
 #### Vulnerability Scanning
+
 ```bash
 # Scan with Trivy
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
@@ -389,6 +409,7 @@ docker scout cves ghcr.io/hexsleeves/tailscale-mcp-server:latest
 ```
 
 #### Image Verification
+
 ```bash
 # Verify image signatures (when available)
 docker trust inspect ghcr.io/hexsleeves/tailscale-mcp-server:latest
@@ -399,6 +420,7 @@ docker trust inspect ghcr.io/hexsleeves/tailscale-mcp-server:latest
 ### Common Issues
 
 #### Container Won't Start
+
 ```bash
 # Check container logs
 docker logs tailscale-mcp
@@ -411,6 +433,7 @@ docker run -it --rm ghcr.io/hexsleeves/tailscale-mcp-server:latest sh
 ```
 
 #### Permission Issues
+
 ```bash
 # Check user/group configuration
 docker run --rm ghcr.io/hexsleeves/tailscale-mcp-server:latest id
@@ -420,6 +443,7 @@ sudo chown -R 1001:1001 ./logs
 ```
 
 #### Network Connectivity
+
 ```bash
 # Test network connectivity
 docker run --rm ghcr.io/hexsleeves/tailscale-mcp-server:latest \
@@ -433,6 +457,7 @@ docker run --rm ghcr.io/hexsleeves/tailscale-mcp-server:latest \
 ### Debug Mode
 
 #### Enable Debug Logging
+
 ```bash
 docker run -d \
   --name tailscale-mcp-debug \
@@ -443,6 +468,7 @@ docker run -d \
 ```
 
 #### Interactive Debugging
+
 ```bash
 # Start container with shell
 docker run -it --rm \
@@ -460,6 +486,7 @@ node dist/index.js
 ### Image Size Optimization
 
 The multi-stage build reduces image size by:
+
 - Excluding development dependencies
 - Using Alpine Linux base image
 - Copying only necessary artifacts
@@ -488,12 +515,14 @@ docker buildx build --platform linux/amd64,linux/arm64 .
 ## Best Practices
 
 ### Development
+
 1. **Use volume mounts** for live code reloading
 2. **Enable debug logging** for development containers
 3. **Use development compose files** for consistent environments
 4. **Mount node_modules** to avoid reinstalling dependencies
 
 ### Production
+
 1. **Use specific image tags** instead of `latest`
 2. **Implement health checks** for container monitoring
 3. **Use secrets management** for sensitive data
@@ -501,6 +530,7 @@ docker buildx build --platform linux/amd64,linux/arm64 .
 5. **Enable logging** with persistent volumes
 
 ### Security
+
 1. **Run as non-root user** (already configured)
 2. **Use minimal base images** (Alpine Linux)
 3. **Scan images regularly** for vulnerabilities
