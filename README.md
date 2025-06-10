@@ -2,6 +2,10 @@
 
 A modern [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that provides seamless integration with Tailscale's CLI commands and REST API, enabling automated network management and monitoring through a standardized interface.
 
+<a href="https://glama.ai/mcp/servers/@HexSleeves/tailscale-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@HexSleeves/tailscale-mcp/badge" alt="Tailscale Server MCP server" />
+</a>
+
 ## 📦 Available Packages
 
 - **NPM**: [`@hexsleeves/tailscale-mcp-server`](https://www.npmjs.com/package/@hexsleeves/tailscale-mcp-server)
