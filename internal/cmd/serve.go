@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	serverMode string
-	httpPort   int
+	serverMode    string
+	httpPort      int
+	cachedVersion string
 )
 
 // serveCmd represents the serve command
@@ -42,6 +43,34 @@ Examples:
   # With verbose logging
   tailscale-mcp-server serve --verbose`,
 	Run: runServer,
+}
+
+func init() {
+	rootCmd.AddCommand(serveCmd)
+
+	// Command-specific flags
+	serveCmd.Flags().StringVarP(&serverMode, "mode", "m", "stdio", "Server mode (stdio|http)")
+	serveCmd.Flags().IntVarP(&httpPort, "port", "p", 8080, "HTTP server port (only used in http mode)")
+
+	// Flag validation
+	serveCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		// Validate server mode
+		if serverMode != "stdio" && serverMode != "http" {
+			return fmt.Errorf("invalid server mode: must be 'stdio' or 'http'")
+		}
+
+		// Validate port range
+		if serverMode == "http" {
+			if httpPort < 1 || httpPort > 65535 {
+				return fmt.Errorf("invalid port: must be between 1 and 65535")
+			}
+		}
+
+		return nil
+	}
+
+	// Cache the version string once during package initialization
+	cachedVersion = getVersion()
 }
 
 func runServer(cmd *cobra.Command, args []string) {
@@ -73,6 +102,7 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	go func() {
 		<-sigChan
@@ -83,7 +113,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	// Start server
 	logger.Info("Starting Tailscale MCP Server",
 		"mode", serverMode,
-		"version", getVersion(),
+		"version", cachedVersion,
 		"verbose", verbose)
 
 	var serverErr error
@@ -101,27 +131,4 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	logger.Info("Server stopped")
-}
-
-func init() {
-	rootCmd.AddCommand(serveCmd)
-
-	// Command-specific flags
-	serveCmd.Flags().StringVarP(&serverMode, "mode", "m", "stdio", "Server mode (stdio|http)")
-	serveCmd.Flags().IntVarP(&httpPort, "port", "p", 8080, "HTTP server port (only used in http mode)")
-
-	// Flag validation
-	serveCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		// Validate server mode
-		if serverMode != "stdio" && serverMode != "http" {
-			return fmt.Errorf("invalid server mode: must be 'stdio' or 'http'")
-		}
-
-		// Validate port range
-		if httpPort < 1 || httpPort > 65535 {
-			return fmt.Errorf("invalid port: must be between 1 and 65535")
-		}
-
-		return nil
-	}
 }

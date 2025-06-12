@@ -33,9 +33,6 @@ func Initialize(level int, logFile string) error {
 	var config zap.Config
 	if isDev {
 		config = zap.NewDevelopmentConfig()
-		// Use console encoding for better readability in development
-		config.Encoding = "console"
-
 		// Custom time format for development
 		config.EncoderConfig.TimeKey = "time"
 		config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")

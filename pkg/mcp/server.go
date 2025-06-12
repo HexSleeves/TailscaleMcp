@@ -10,7 +10,7 @@ import (
 // with proper handshake and capability negotiation
 type BasicServer struct {
 	serverInfo ServerInfo
-	tools      []Tool
+	tools      map[string]*Tool
 }
 
 // NewBasicServer creates a new basic MCP server
@@ -20,13 +20,13 @@ func NewBasicServer(name, version string) *BasicServer {
 			Name:    name,
 			Version: version,
 		},
-		tools: make([]Tool, 0),
+		tools: make(map[string]*Tool),
 	}
 }
 
 // RegisterTool adds a tool to the server's tool registry
 func (s *BasicServer) RegisterTool(tool Tool) {
-	s.tools = append(s.tools, tool)
+	s.tools[tool.Name] = &tool
 }
 
 // Initialize handles the MCP initialization handshake
@@ -61,15 +61,8 @@ func (s *BasicServer) ListTools(ctx context.Context, req *ListToolsRequest) (*Li
 // CallTool executes a tool call - this is a basic implementation that should be overridden
 func (s *BasicServer) CallTool(ctx context.Context, req *CallToolRequest) (*CallToolResponse, error) {
 	// Find the requested tool
-	var tool *Tool
-	for i := range s.tools {
-		if s.tools[i].Name == req.Name {
-			tool = &s.tools[i]
-			break
-		}
-	}
-
-	if tool == nil {
+	tool, exists := s.tools[req.Name]
+	if !exists {
 		return NewErrorResponse(fmt.Sprintf("Tool '%s' not found", req.Name)), nil
 	}
 

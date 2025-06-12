@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/spf13/cobra"
 
@@ -32,7 +30,9 @@ Environment Variables:
 	Version: getVersion(),
 	// Default behavior: show help if no subcommand
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			logger.Error("failed to display help", "error", err)
+		}
 	},
 }
 
@@ -65,9 +65,6 @@ func getVersion() string {
 
 func init() {
 	// Custom version template
-	rootCmd.SetVersionTemplate(fmt.Sprintf("Tailscale MCP Server %s\nBuilt with %s\nPlatform: %s/%s\n",
-		getVersion(),
-		runtime.Version(),
-		runtime.GOOS,
-		runtime.GOARCH))
+	rootCmd.SetVersionTemplate(
+		"Tailscale MCP Server {{.Version}}\nBuilt with {{.GoVersion}}\nPlatform: {{.OS}}/{{.Arch}}\n")
 }

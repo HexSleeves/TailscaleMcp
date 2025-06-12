@@ -26,7 +26,7 @@ This document outlines the migration plan from TypeScript to Go for the Tailscal
 
 ## Go Project Structure
 
-```
+```bash
 tailscale-mcp-server/
 ├── cmd/
 │   └── tailscale-mcp-server/
