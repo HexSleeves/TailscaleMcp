@@ -23,7 +23,7 @@ build/
 # IDE
 .vscode/
 .idea/
-*.sw?
+
 # Logs
 *.log
 

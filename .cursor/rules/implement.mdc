@@ -1,11 +1,6 @@
 ---
-description: Always attach when Implementing Code (Act/Code MODE)
-globs: 
-alwaysApply: false
----
----
-description: Include these rules while IMPLEMENTATION/Coding.
-globs: 
+description: Go implementation patterns and systematic coding approach
+globs: ["**/*.go"]
 alwaysApply: true
 ---
 # IMPLEMENTATION (ACT MODE/Code MODE):

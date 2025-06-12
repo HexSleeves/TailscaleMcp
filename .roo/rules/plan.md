@@ -1,17 +1,13 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description: Always include these rules.
-globs: 
+globs:
 alwaysApply: true
 ---
 - Below is the Planning Workflow to follow:
 
 1. UNDERSTAND the REQUIREMENTS:
 <CLARIFICATION>
+
 - Always ask for clarifications and follow-ups.
 - Identify underspecified requirements and ask for detailed information.
 - Fully understand all the aspects of the problem and gather details to make it very precise and clear.
@@ -22,6 +18,7 @@ alwaysApply: true
 
 2. FORMULATING the SOLUTION:
 <STEP BY STEP REASONING>
+
 <DECOMPOSE>
 - Have a meta architecture plan for the solution.
 - Break down the problem into key concepts and smaller sub-problems.
@@ -54,10 +51,10 @@ d. Can use <WEB USE> if needed to do research.
 3. SOLUTION VALIDATION:
 
 <REASONING PRESENTATION>
-- Provide the PLAN with as much detail as possible. 
+- Provide the PLAN with as much detail as possible.
 - Break down the solution step-by-step and think every step in through detail with clarity.
 - Reason out its optimality w.r.t. other promising solutions.
-- Explicitly tell all your assumptions, choices and decisions 
+- Explicitly tell all your assumptions, choices and decisions
 - Explain trade-offs in solutions
 - restate my query in your own words if necessary after giving the solution
 </REASONING PRESENTATION>

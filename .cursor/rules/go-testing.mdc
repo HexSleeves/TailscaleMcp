@@ -1,0 +1,326 @@
+---
+description: Go testing patterns and conventions
+globs: ["**/*_test.go", "**/test/**/*.go"]
+alwaysApply: true
+---
+# Go Testing Patterns & Conventions
+
+## Test File Organization
+
+### Naming Conventions
+- Test files end with `_test.go`
+- Test functions start with `Test` followed by the function name
+- Benchmark functions start with `Benchmark`
+- Example functions start with `Example`
+
+### Package Structure
+```go
+package mypackage_test // External tests - test public API
+
+package mypackage // Internal tests - can test private functions
+```
+
+## Test Function Patterns
+
+### Table-Driven Tests
+```go
+func TestParseUser(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected User
+        wantErr  bool
+    }{
+        {
+            name:     "valid user",
+            input:    `{"name": "John", "age": 30}`,
+            expected: User{Name: "John", Age: 30},
+            wantErr:  false,
+        },
+        {
+            name:    "invalid json",
+            input:   `{"name": "John", "age":}`,
+            wantErr: true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := ParseUser(tt.input)
+            
+            if tt.wantErr {
+                if err == nil {
+                    t.Errorf("ParseUser() expected error but got none")
+                }
+                return
+            }
+            
+            if err != nil {
+                t.Errorf("ParseUser() unexpected error: %v", err)
+                return
+            }
+            
+            if !reflect.DeepEqual(result, tt.expected) {
+                t.Errorf("ParseUser() = %v, want %v", result, tt.expected)
+            }
+        })
+    }
+}
+```
+
+### Subtests for Grouping
+```go
+func TestUserService(t *testing.T) {
+    t.Run("Create", func(t *testing.T) {
+        // test user creation
+    })
+    
+    t.Run("Update", func(t *testing.T) {
+        // test user updates
+    })
+    
+    t.Run("Delete", func(t *testing.T) {
+        // test user deletion
+    })
+}
+```
+
+## Assertions and Error Checking
+
+### Standard Patterns
+```go
+// Check for unexpected errors
+if err != nil {
+    t.Fatalf("unexpected error: %v", err)
+}
+
+// Check for expected errors
+if err == nil {
+    t.Fatal("expected error but got none")
+}
+
+// Compare values
+if got != want {
+    t.Errorf("got %v, want %v", got, want)
+}
+
+// Use testify for complex assertions (if available)
+assert.Equal(t, expected, actual)
+require.NoError(t, err)
+```
+
+### Helper Functions
+```go
+// Mark functions as test helpers
+func setupTestDB(t *testing.T) *sql.DB {
+    t.Helper() // This will show the caller's line number on failure
+    
+    db, err := sql.Open("sqlite3", ":memory:")
+    if err != nil {
+        t.Fatalf("failed to open test database: %v", err)
+    }
+    
+    return db
+}
+```
+
+## Test Fixtures and Setup
+
+### Test Data Management
+```go
+func TestUserOperations(t *testing.T) {
+    // Setup
+    db := setupTestDB(t)
+    defer db.Close()
+    
+    userService := NewUserService(db)
+    
+    // Test data
+    testUser := User{
+        Name:  "Test User",
+        Email: "test@example.com",
+    }
+    
+    // Tests...
+}
+```
+
+### Temporary Files and Directories
+```go
+func TestFileOperations(t *testing.T) {
+    // Create temp directory
+    tmpDir := t.TempDir() // Automatically cleaned up
+    
+    testFile := filepath.Join(tmpDir, "test.txt")
+    
+    // Write test data
+    err := os.WriteFile(testFile, []byte("test content"), 0644)
+    if err != nil {
+        t.Fatalf("failed to write test file: %v", err)
+    }
+    
+    // Run tests...
+}
+```
+
+## Mocking and Test Doubles
+
+### Interface-Based Mocking
+```go
+type UserRepository interface {
+    GetUser(id int) (*User, error)
+    SaveUser(user *User) error
+}
+
+type MockUserRepository struct {
+    users map[int]*User
+}
+
+func (m *MockUserRepository) GetUser(id int) (*User, error) {
+    user, exists := m.users[id]
+    if !exists {
+        return nil, errors.New("user not found")
+    }
+    return user, nil
+}
+
+func TestUserService_GetUser(t *testing.T) {
+    mockRepo := &MockUserRepository{
+        users: map[int]*User{
+            1: {ID: 1, Name: "John"},
+        },
+    }
+    
+    service := NewUserService(mockRepo)
+    user, err := service.GetUser(1)
+    
+    // assertions...
+}
+```
+
+## Integration Testing
+
+### Test Environment Setup
+```go
+func TestIntegration_UserAPI(t *testing.T) {
+    if testing.Short() {
+        t.Skip("skipping integration test in short mode")
+    }
+    
+    // Setup test server
+    server := httptest.NewServer(handler)
+    defer server.Close()
+    
+    client := &http.Client{Timeout: 5 * time.Second}
+    
+    // Test API endpoints...
+}
+```
+
+### Database Testing
+```go
+func TestDatabase_UserOperations(t *testing.T) {
+    // Use test database or transaction rollback
+    tx, err := db.Begin()
+    if err != nil {
+        t.Fatalf("failed to begin transaction: %v", err)
+    }
+    defer tx.Rollback() // Rollback changes after test
+    
+    // Run tests using tx instead of db
+}
+```
+
+## Benchmarking
+
+### Benchmark Functions
+```go
+func BenchmarkParseUser(b *testing.B) {
+    input := `{"name": "John", "age": 30}`
+    
+    b.ResetTimer() // Reset timer after setup
+    
+    for i := 0; i < b.N; i++ {
+        _, err := ParseUser(input)
+        if err != nil {
+            b.Fatalf("unexpected error: %v", err)
+        }
+    }
+}
+
+func BenchmarkParseUser_Parallel(b *testing.B) {
+    input := `{"name": "John", "age": 30}`
+    
+    b.RunParallel(func(pb *testing.PB) {
+        for pb.Next() {
+            _, err := ParseUser(input)
+            if err != nil {
+                b.Fatalf("unexpected error: %v", err)
+            }
+        }
+    })
+}
+```
+
+## Testing Utilities
+
+### Common Test Helpers
+```go
+// Compare complex structures
+func equalUsers(t *testing.T, got, want User) {
+    t.Helper()
+    
+    if got.Name != want.Name {
+        t.Errorf("Name: got %q, want %q", got.Name, want.Name)
+    }
+    if got.Age != want.Age {
+        t.Errorf("Age: got %d, want %d", got.Age, want.Age)
+    }
+}
+
+// Assert no error
+func mustNoError(t *testing.T, err error) {
+    t.Helper()
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+}
+```
+
+## Project-Specific Testing
+
+### MCP Server Testing
+- Test JSON-RPC message handling
+- Mock external API calls (Tailscale API)
+- Test CLI command integration
+- Verify error responses match MCP format
+
+### CLI Testing
+- Test command-line argument parsing
+- Mock external dependencies
+- Test signal handling
+- Verify output format and content
+
+## Test Execution
+
+### Running Tests
+```bash
+go test ./...                    # Run all tests
+go test -v ./...                 # Verbose output
+go test -short ./...             # Skip long-running tests
+go test -race ./...              # Race condition detection
+go test -cover ./...             # Coverage reporting
+go test -bench=. ./...           # Run benchmarks
+```
+
+### Test Tags
+```go
+//go:build integration
+// +build integration
+
+package main_test
+
+// Integration tests that require external dependencies
+```
+
+Run with: `go test -tags=integration`

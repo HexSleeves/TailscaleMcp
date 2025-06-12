@@ -134,4 +134,4 @@ This project uses comprehensive Cursor rules focusing on:
 
 ## Memory Context
 
-- You are allowed to search hidden files like `.cursor` or `.taskmaster`
+- You are allowed to search hidden files such as `.cursor` or `.taskmaster`

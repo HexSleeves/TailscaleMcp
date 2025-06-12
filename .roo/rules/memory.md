@@ -1,9 +1,4 @@
 ---
-description:
-globs:
-alwaysApply: true
----
----
 description: Set up Persistent Memory for Project using files.
 globs:
 alwaysApply: true
@@ -11,7 +6,9 @@ alwaysApply: true
 This outlines the fundamental principles, required files, workflow structure, and essential procedures that govern documentation, and maintaining a memory using file system.
 
 # Memory Files Structure
+
 The Memory Files consists of required core files and optional context files. Files build upon each other in a clear hierarchy:
+
 ```mermaid
 flowchart TD
     PB[ [product_requirement_docs.md](mdc:docs/product_requirement_docs.md) ] --> PC[ [technical.md](mdc:docs/technical.md) ]
@@ -44,62 +41,77 @@ flowchart TD
 
 
 ```
+
 ## Core Files (Required)
+
   7 files:
+
   1. [product_requirement_docs.md](mdc:docs/product_requirement_docs.md) : Product Requirement Document (PRD) for the project or an SOP.
-  - Why this project exists
-  - Problems it solves
-  - Defines core requirements and goals
-  - Foundation document that shapes all other files
-  - Source of truth for project scope
-  - Created at project start if it doesn't exist
+
+- Why this project exists
+- Problems it solves
+- Defines core requirements and goals
+- Foundation document that shapes all other files
+- Source of truth for project scope
+- Created at project start if it doesn't exist
 
   2. [architecture.md](mdc:docs/architecture.md): System architecture
-  - How it should work
-  - Component relationships
-  - Dependencies
+
+- How it should work
+- Component relationships
+- Dependencies
 
   3. [technical.md](mdc:docs/technical.md) : Development environment and stack
-  - Technologies used
-  - Development setup
-  - Key technical decisions
-  - Design patterns in use
-  - Technical constraints
+
+- Technologies used
+- Development setup
+- Key technical decisions
+- Design patterns in use
+- Technical constraints
 
   4. [tasks_plan.md](mdc:tasks/tasks_plan.md): Detailed Task backlog
-  - In-Depth Tasks list and Project Progress
-  - What works
-  - What's left to build
-  - Current status
-  - Known issues
+
+- In-Depth Tasks list and Project Progress
+- What works
+- What's left to build
+- Current status
+- Known issues
 
   5. [active_context.md](mdc:tasks/active_context.md) : Current state of development
-  - Current work focus
-  - Active decisions and considerations
-  - Recent changes
-  - Next steps
+
+- Current work focus
+- Active decisions and considerations
+- Recent changes
+- Next steps
 
   6. [error-documentation.md](mdc:.roo/rules/error-documentation.md) :
-  - During your interaction, if you find a fix to a mistake in this project or a correction you received reusable, you should take note in the @error-documentation.md file so you will not make the same mistake again.
-  - Known issues: their state, context, and resolution
+
+- During your interaction, if you find a fix to a mistake in this project or a correction you received reusable, you should take note in the @error-documentation.md file so you will not make the same mistake again.
+- Known issues: their state, context, and resolution
 
   7. [lessons-learned.md](mdc:.roo/rules/lessons-learned.md): learning journal for each project
-  - It captures important patterns, preferences, and project intelligence
-  - It is detailed in @lessons-learned.md
+
+- It captures important patterns, preferences, and project intelligence
+- It is detailed in @lessons-learned.md
 
 ## Context Files (Optional)
+
 Detailed docs. Retrieve on demand if needed for context.
 
 1. docs/literature/ :
-  - literature survey and researches are in this directory
-  - Each literature topic is a latex file (docs/literature/*.tex)
+
+- literature survey and researches are in this directory
+- Each literature topic is a latex file (docs/literature/*.tex)
 
 2. tasks/rfc/ :
-  - contains RFC for each individual task in @tasks_plan.md
-  - RFCs will be in latex file format (tasks/*.tex)
+
+- contains RFC for each individual task in @tasks_plan.md
+- RFCs will be in latex file format (tasks/*.tex)
 
 ## Additional Context
+
 Create additional files or folders as Memory files in docs/ or tasks/ when they help organize:
+
 - Integration specifications
 - Testing strategies
 - Benchmarking setups
@@ -107,10 +119,12 @@ Create additional files or folders as Memory files in docs/ or tasks/ when they 
 - Deployment procedures
 
 # Core Workflows
+
 Now we define the procedural workflows to read/write to these memeory files.
 The system operates in distinct MODES (PLAN/ACT), controlled exclusively by the user input or the task in current request. Current input will determine the MODE, based on which the Workflow selection is always dictated. In user input explicit mode setting will also be specified by "MODE = PLAN MODE" or "MODE = ACT MODE", so if explicit MODE setting present follow that, else guess the mode from the request and SET it. Ask for the MODE if you are not 100% confident, if any doubt ask explicitely.
 
 ## PLAN MODE
+
 ```mermaid
 flowchart TD
     Start[Start] --> ReadFiles[Read Memory Files]
@@ -132,6 +146,7 @@ flowchart TD
 ```
 
 ## ACT MODE
+
 ```mermaid
 flowchart TD
     Start[Start] --> Context[Check Memory Files (Core Files always, rest based on context) ]
@@ -144,6 +159,7 @@ flowchart TD
 # Documentation Updates
 
 Memory Files updates occur when:
+
 1. Discovering new project patterns
 2. After implementing significant changes
 3. When user requests with **update memory files** (MUST review ALL Core Files)
@@ -193,6 +209,7 @@ flowchart TD
 ```
 
 ## What to Capture
+
 - Critical implementation paths
 - User preferences and workflow
 - Project-specific patterns

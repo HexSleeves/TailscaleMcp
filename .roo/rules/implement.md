@@ -1,21 +1,17 @@
 ---
-description: Always attach when Implementing Code (Act/Code MODE)
-globs: 
+description: Always include these rules while IMPLEMENTATION/Coding.
+globs:
 alwaysApply: false
 ---
----
-description: Include these rules while IMPLEMENTATION/Coding.
-globs: 
-alwaysApply: true
----
-# IMPLEMENTATION (ACT MODE/Code MODE):
+# IMPLEMENTATION (ACT MODE/Code MODE)
+
 <PROGRAMMING PRINCIPLES>
 - algorithm_efficiency: use the most efficient algorithms and data structures
 - modularity: write modular code, break complex logic into smaller atomic parts. Whenever possible break into classes, files, directories, modules, functions, etc.
 - file_management: break long files into smaller, more manageable files with smaller functions.
 - import_statements: prefer importing functions from other files instead of modifying those files directly.
 - file_organization: organize files into directories and folders.
-- reuse: prefer to reuse existing code instead of writing it from scratch. 
+- reuse: prefer to reuse existing code instead of writing it from scratch.
 - code_preservation: Preserve What Works. Don’t modify working components without necessity.
 - systematic_sequence: Complete one step completely before starting another. Keep systematic sequence of functionalities.
 - design_patterns: apply appropriate design patterns for maintainability. Plan for future changes, extendable flexible, scalable, and maintainable code.
@@ -33,7 +29,7 @@ alwaysApply: true
 - What cascading effects will this change have?
 </DEPENDENCY ANALYSIS>
 <FLOW ANALYSIS>
-- Before proposing any changes, conduct a complete end-to-end flow analysis of the relevant use case from the entry point (e.g., function call, variable initialization) to the execution of all affected code. 
+- Before proposing any changes, conduct a complete end-to-end flow analysis of the relevant use case from the entry point (e.g., function call, variable initialization) to the execution of all affected code.
 - Track the flow of data and logic throughout all components involved to understand its full scope.
 </FLOW ANALYSIS>
 - Document these dependencies thoroughly, including the specific usage of functions or logic in files specified by @memory.md
@@ -41,23 +37,26 @@ alwaysApply: true
 
 [Step: 2]
 <PLAN CODE>
+
 - If needed initiate <CLARIFICATION> process.
 - Use <STEP BY STEP REASONING> to Outline a detailed plan including component dependencies, architectural considerations before coding. Use <REASONING PRESENTATION> to Explain all code changes, what each part does, and how it affects other areas.
 <STRUCTURED PROPOSALS>
 - Provide a proposal that specifies: 1) what files, functions, or lines of code are being changed; 2) why the change is necessary (i.e. bug fix, improvement or new feature); 3) all of the directly impacted modules or files; 4) potential side effects; 5) a detailed explanation of any tradeoffs.
-</STRUCTURED PROPOSALS> 
+</STRUCTURED PROPOSALS>
 </PLAN CODE>
 
 [Step: 3]
 <MAKE CHANGES>
 
 1. Document Current State in files specified by @memory.md
+
 - What’s currently working?
 - What’s the current error/issue?
 - Which files will be affected?
 
 2. Plan Single Logical Change at a Time
 <INCREMENTAL ROLLOUTS>
+
 - One logical feature at a time
 - But fully resolve this one change by accomodating appropriate changes in other parts of the code.
 - Adjust all existing dependencies and issues created by this change.
@@ -66,7 +65,8 @@ alwaysApply: true
 
 3. Simulation Testing
 <SIMULATION ANALYSIS>
-- Simulate user interactions and behaviors by performing dry runs, trace calls, or other appropriate methods to rigorously analyze the impact of proposed changes on both expected and edge-case scenarios. 
+
+- Simulate user interactions and behaviors by performing dry runs, trace calls, or other appropriate methods to rigorously analyze the impact of proposed changes on both expected and edge-case scenarios.
 - Generate feedback on all potential side effects.
 </SIMULATION ANALYSIS>
 <SIMULATION VALIDATION>
@@ -78,10 +78,12 @@ alwaysApply: true
 [Step: 4] Perform <TESTING>.
 
 [Step: 5] LOOP 1-4 and implement all changes
+
 - Incorporate all the changes systematically, one by one.
 - Verify the changes and test them one by one.
 
 [Step: 6] Optimize the implemented codes
+
 - Optimize the implemented code, after all changes are tested and verified.
 
 </SYSTEMATIC CODE PROTOCOL>
@@ -92,6 +94,7 @@ alwaysApply: true
 </REFERENCE>
 
 # TESTING (Always write TEST after IMPLEMENTATION) [ACT/Code MODE]
+
 <TESTING>
 
 <DEPENDENCY BASED TESTING>

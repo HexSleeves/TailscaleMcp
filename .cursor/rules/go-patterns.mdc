@@ -1,0 +1,175 @@
+---
+description: Go programming patterns and best practices
+globs: ["**/*.go"]
+alwaysApply: true
+---
+# Go Programming Patterns & Best Practices
+
+## Code Organization
+
+### Package Structure
+- Use lowercase package names that match directory names
+- Keep package names short and descriptive
+- Avoid stuttering: `user.User` not `user.UserStruct`
+- Group related functionality in packages, not files
+
+### Naming Conventions
+- Use camelCase for variables and functions
+- Use PascalCase for exported identifiers
+- Use ALL_CAPS for constants
+- Prefer `i` over `index`, `ctx` over `context` in local scope
+- Use descriptive names for package-level variables
+
+## Error Handling
+
+### Standard Patterns
+```go
+// Always check errors immediately
+result, err := someFunction()
+if err != nil {
+    return fmt.Errorf("failed to do something: %w", err)
+}
+
+// Use wrapped errors for context
+return fmt.Errorf("processing user %d: %w", userID, err)
+```
+
+### Error Types
+- Return `error` interface, not concrete types
+- Use `errors.New()` for simple errors
+- Use `fmt.Errorf()` for formatted errors
+- Create custom error types for complex cases
+
+## Concurrency Patterns
+
+### Goroutines
+- Always have a way to stop goroutines
+- Use context for cancellation
+- Don't start goroutines without knowing when they'll end
+
+### Channels
+- Prefer channels over mutexes for communication
+- Close channels from sender, not receiver
+- Use buffered channels sparingly and with purpose
+- `for range` over channels automatically handles close
+
+### Synchronization
+```go
+// Prefer sync.Once for initialization
+var once sync.Once
+var instance *Service
+
+func GetService() *Service {
+    once.Do(func() {
+        instance = &Service{}
+    })
+    return instance
+}
+```
+
+## Interface Design
+
+### Best Practices
+- Keep interfaces small and focused
+- Define interfaces where they're used, not where they're implemented
+- Accept interfaces, return concrete types
+- Use standard library interfaces when possible (io.Reader, io.Writer)
+
+### Common Patterns
+```go
+// Accept interfaces
+func ProcessData(r io.Reader) error { ... }
+
+// Return concrete types
+func NewClient() *Client { ... }
+```
+
+## Memory Management
+
+### Avoid Allocations
+- Use string builder for concatenation
+- Reuse slices with proper capacity
+- Use sync.Pool for expensive objects
+- Prefer value receivers when possible
+
+### Slice Patterns
+```go
+// Proper slice initialization
+data := make([]Item, 0, expectedSize)
+
+// Safe slice appending
+if len(items) > 0 {
+    result = append(result, items...)
+}
+```
+
+## CLI and Server Patterns
+
+### Context Usage
+- Always pass context as first parameter
+- Use context for cancellation and timeouts
+- Don't store context in structs
+
+### Configuration
+- Use struct tags for configuration parsing
+- Validate configuration at startup
+- Provide sensible defaults
+
+### Logging
+- Use structured logging (slog recommended)
+- Include relevant context in log messages
+- Use appropriate log levels
+
+## Testing Patterns
+
+### Test Organization
+- Use table-driven tests for multiple scenarios
+- Use subtests for grouping related tests
+- Put tests in same package with `_test.go` suffix
+
+### Common Patterns
+```go
+func TestSomething(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+        wantErr  bool
+    }{
+        // test cases
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // test implementation
+        })
+    }
+}
+```
+
+## Performance Considerations
+
+### Profiling
+- Use built-in profiling tools
+- Profile before optimizing
+- Focus on algorithmic improvements first
+
+### Common Optimizations
+- Use string builder for string concatenation
+- Avoid unnecessary allocations in hot paths
+- Use buffered I/O for file operations
+- Consider using channels vs mutexes based on use case
+
+## Project-Specific Patterns
+
+### MCP Server Patterns
+- Implement proper JSON-RPC handling
+- Use structured logging for debugging
+- Handle context cancellation properly
+- Validate inputs using appropriate libraries
+
+### CLI Integration
+- Use cobra or flag for command-line parsing
+- Implement proper signal handling
+- Provide helpful error messages
+- Support configuration files and environment variables

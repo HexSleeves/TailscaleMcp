@@ -1,9 +1,4 @@
 ---
-description:
-globs:
-alwaysApply: true
----
----
 description: Instructions to be always followed.
 globs:
 alwaysApply: true
