@@ -131,3 +131,7 @@ This project uses comprehensive Cursor rules focusing on:
 - **Comprehensive Testing**: Unit and integration tests for all functionality
 - **Code Preservation**: Maintain working components, minimize disruption
 - **Incremental Changes**: One logical feature at a time with full dependency resolution
+
+## Memory Context
+
+- You are allowed to search hidden files like `.cursor` or `.taskmaster`

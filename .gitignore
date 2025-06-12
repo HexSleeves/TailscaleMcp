@@ -20,16 +20,12 @@ go.work
 # Build artifacts
 dist/
 build/
-
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-
+*.sw?
 # Logs
 *.log
-debug-*.log
 
 # Environment variables
 .env
@@ -56,3 +52,24 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
+
+# Added by Task Master AI
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/
