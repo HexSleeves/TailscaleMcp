@@ -1,0 +1,153 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Lessons Learned - Tailscale MCP Server Go Migration
+
+## Build and Development Workflow
+
+### **Critical Build Check Command**
+- **Always run `make build` to check for errors** after making changes
+- The Makefile handles proper Go module management (`go mod download`, `go mod tidy`)
+- Build errors are caught early and provide clear feedback
+- Use `make build` instead of `go build` for consistency with project standards
+
+## Go-Idiomatic Design Patterns
+
+### **Prefer Go Idioms Over 1:1 Ports**
+- **Don't force TypeScript patterns into Go** - leverage Go's strengths instead
+- **Composition over inheritance**: Use interfaces and embedding rather than class hierarchies
+- **Factory methods over stored instances**: Create servers on-demand rather than storing them
+
+#### **Server Architecture Evolution**
+**❌ TypeScript-style (storing instances):**
+```go
+type TailscaleMCPServer struct {
+    stdioServer *StdioServer  // Stored instances
+    httpServer  *HTTPServer   // Not idiomatic Go
+}
+```
+
+**✅ Go-idiomatic (interfaces + factory methods):**
+```go
+type Server interface {
+    Start(ctx context.Context) error  // Common interface
+}
+
+type TailscaleMCPServer struct {
+    config    *config.Config
+    api       *tailscale.APIClient
+    mcpServer mcp.Server
+}
+
+// Factory methods - create when needed
+func (s *TailscaleMCPServer) NewStdioServer() Server
+func (s *TailscaleMCPServer) NewHTTPServer(port int) Server
+```
+
+### **Functional Options Pattern**
+- **Use functional options for flexible configuration**:
+```go
+func New(cfg *config.Config, opts ...ServerOption) (*TailscaleMCPServer, error)
+
+func WithCustomMCPServer(server mcp.Server) ServerOption
+```
+- **Benefits**: Extensible, backward compatible, clear intent
+
+### **Interface Design Best Practices**
+- **Small, focused interfaces**: `Server` interface with single `Start` method
+- **Implicit satisfaction**: Both `StdioServer` and `HTTPServer` automatically implement `Server`
+- **Composition**: Use interfaces to compose behavior rather than inheritance
+
+### **Dependency Injection Patterns**
+- **Constructor injection**: Pass dependencies to `New()` function
+- **Method injection**: Use functional options for optional dependencies
+- **Avoid global state**: Pass dependencies explicitly through the call chain
+
+## Development Process Insights
+
+### **Migration Strategy Refinement**
+- **Start with 1:1 port, then refactor to Go idioms** - this approach worked well
+- **Identify non-Go patterns early** and refactor them out
+- **Leverage Go's type system** - interfaces, composition, and explicit error handling
+
+### **Go-Specific Patterns Applied**
+- **Error handling**: Explicit error returns, no exceptions
+- **Context propagation**: Pass `context.Context` through all async operations
+- **Interface satisfaction**: Implicit implementation of interfaces
+- **Factory methods**: Create instances when needed, not stored
+
+### **Testing Approach**
+- **Interface-based testing**: Mock the `Server` interface for unit tests
+- **Dependency injection**: Easy to inject test doubles
+- **Context testing**: Test context cancellation and timeouts
+
+## Architecture Benefits Achieved
+
+### **Flexibility Improvements**
+- **Pluggable servers**: Easy to add new transport types (WebSocket, gRPC, etc.)
+- **Testable design**: Interfaces make mocking straightforward
+- **Configuration flexibility**: Functional options allow customization
+
+### **Go Performance Benefits**
+- **No stored instances**: Reduced memory footprint
+- **Interface dispatch**: Efficient virtual method calls
+- **Explicit resource management**: Clear lifecycle with context cancellation
+
+### **Maintainability Gains**
+- **Single responsibility**: Each component has a clear purpose
+- **Loose coupling**: Components depend on interfaces, not concrete types
+- **Extensibility**: Easy to add new features without breaking existing code
+
+## Current Project Status
+
+### **Completed Components**
+- ✅ **Task 5**: Tailscale API Client (100% complete with 18 subtasks)
+- ✅ **MCP Protocol Foundation**: Core types and interfaces
+- ✅ **Server Architecture**: Go-idiomatic stdio and HTTP server implementations
+- ✅ **Build System**: Makefile with proper Go tooling
+
+### **In Progress**
+- 🔄 **Task 11**: MCP Server Modes (architecture complete, testing needed)
+- 🔄 **Integration**: Final testing and validation
+
+### **Key Files Structure**
+```
+internal/server/
+├── server.go      # Main TailscaleMCPServer with Go idioms
+├── stdio.go       # Stdio transport (implements Server interface)
+└── http.go        # HTTP transport (implements Server interface)
+
+pkg/mcp/
+├── types.go       # MCP protocol types and interfaces
+└── server.go      # BasicMCPServer business logic
+
+internal/tailscale/
+├── api.go         # Tailscale API client
+├── types.go       # Tailscale data structures
+└── api_test.go    # Comprehensive API tests
+```
+
+## Next Steps Priorities
+
+1. **Complete Task 11**: Integration testing and validation
+2. **Tool Registry**: Implement proper tool registration system (Task 7)
+3. **CLI Wrapper**: Secure command execution (Task 6)
+4. **Network Tools**: Port network management tools (Task 8)
+
+## Important Commands to Remember
+
+- `make build` - **Always use this for build checks**
+- `make test` - Run all tests
+- `make fmt` - Format code
+- `go mod tidy` - Clean up dependencies
+- `go get <package>` - Add new dependencies
+
+## Key Go Principles Applied
+
+1. **"Don't communicate by sharing memory; share memory by communicating"** - Use channels and interfaces
+2. **"The bigger the interface, the weaker the abstraction"** - Keep interfaces small and focused
+3. **"Accept interfaces, return concrete types"** - Factory methods return concrete types
+4. **"Make the zero value useful"** - Struct initialization with sensible defaults
+5. **"Errors are values"** - Explicit error handling throughout

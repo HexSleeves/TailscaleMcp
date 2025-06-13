@@ -91,7 +91,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	// Create server
-	srv, err := server.New(cfg)
+	tailscaleMCPServer, err := server.New(cfg)
 	if err != nil {
 		logger.Fatal("Failed to create server", "error", err)
 	}
@@ -119,9 +119,9 @@ func runServer(cmd *cobra.Command, args []string) {
 	var serverErr error
 	switch serverMode {
 	case "stdio":
-		serverErr = srv.StartStdio(ctx)
+		serverErr = tailscaleMCPServer.StartStdio(ctx)
 	case "http":
-		serverErr = srv.StartHTTP(ctx, httpPort)
+		serverErr = tailscaleMCPServer.StartHTTP(ctx, httpPort)
 	default:
 		logger.Fatal("Invalid server mode", "mode", serverMode, "valid_modes", []string{"stdio", "http"})
 	}

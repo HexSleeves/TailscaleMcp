@@ -3,6 +3,7 @@ module github.com/hexsleeves/tailscale-mcp-server
 go 1.24.4
 
 require (
+	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.9.1
 	go.uber.org/zap v1.27.0
