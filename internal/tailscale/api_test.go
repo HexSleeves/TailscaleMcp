@@ -99,7 +99,9 @@ func TestListDevices(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockDevices)
+		if err := json.NewEncoder(w).Encode(mockDevices); err != nil {
+			t.Errorf("Failed to encode mock devices: %v", err)
+		}
 	})
 	defer server.Close()
 
@@ -141,7 +143,9 @@ func TestGetDevice(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockDevice)
+		if err := json.NewEncoder(w).Encode(mockDevice); err != nil {
+			t.Errorf("Failed to encode mock device: %v", err)
+		}
 	})
 	defer server.Close()
 
@@ -178,7 +182,9 @@ func TestGetTailnetInfo(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockTailnet)
+		if err := json.NewEncoder(w).Encode(mockTailnet); err != nil {
+			t.Errorf("Failed to encode mock tailnet: %v", err)
+		}
 	})
 	defer server.Close()
 
@@ -198,9 +204,11 @@ func TestAPIError(t *testing.T) {
 	client, server := setupTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"message": "Unauthorized",
-		})
+		}); err != nil {
+			t.Errorf("Failed to encode error response: %v", err)
+		}
 	})
 	defer server.Close()
 
@@ -223,9 +231,11 @@ func TestAPIError(t *testing.T) {
 func TestTestConnection(t *testing.T) {
 	client, server := setupTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"name": "test-tailnet",
-		})
+		}); err != nil {
+			t.Errorf("Failed to encode test response: %v", err)
+		}
 	})
 	defer server.Close()
 

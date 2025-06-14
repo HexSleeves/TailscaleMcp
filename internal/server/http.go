@@ -214,17 +214,19 @@ func (s *HTTPServer) handleShutdown(w http.ResponseWriter, r *http.Request, id j
 func (s *HTTPServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status": "healthy",
 		"server": "tailscale-mcp-server",
-	})
+	}); err != nil {
+		logger.Error("Failed to encode health response", "error", err)
+	}
 }
 
 // handleInfo provides server information
 func (s *HTTPServer) handleInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"name":            "tailscale-mcp-server",
 		"version":         "dev", // TODO: Get from build info
 		"protocolVersion": mcp.ProtocolVersion,
@@ -233,7 +235,9 @@ func (s *HTTPServer) handleInfo(w http.ResponseWriter, r *http.Request) {
 				"listChanged": false,
 			},
 		},
-	})
+	}); err != nil {
+		logger.Error("Failed to encode info response", "error", err)
+	}
 }
 
 // parseMessage parses a raw message into a typed message

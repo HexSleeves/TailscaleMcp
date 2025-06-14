@@ -70,3 +70,12 @@ node_modules/
 # Task files
 tasks.json
 tasks/
+
+# Added by Task Master AI
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
