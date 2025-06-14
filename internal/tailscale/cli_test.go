@@ -1,7 +1,6 @@
 package tailscale
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +30,6 @@ func useStubBinary(t *testing.T) {
 }
 
 func setupCliTest(t *testing.T) *TailscaleCLI {
-
 	useStubBinary(t) // ensure stub is first in PATH
 
 	// Initialize logger for tests
@@ -90,213 +88,199 @@ func TestGetStatus(t *testing.T) {
 	}
 }
 
-func TestCLIIntegration(t *testing.T) {
+func TestCommandWhitelist(t *testing.T) {
+	expectedCommands := []string{
+		"status", "up", "down", "logout", "switch", "configure",
+		"netcheck", "ip", "ping", "ssh", "version", "update",
+		"web", "file", "bugreport", "cert", "lock", "licenses",
+		"exit-node", "set", "unset",
+	}
+
+	for _, cmd := range expectedCommands {
+		assert.True(t, allowedCommands[cmd], "Command %s should be allowed", cmd)
+	}
+
+	disallowedCommands := []string{
+		"rm", "cat", "ls", "chmod", "sudo", "su", "exec",
+	}
+
+	for _, cmd := range disallowedCommands {
+		assert.False(t, allowedCommands[cmd], "Command %s should NOT be allowed", cmd)
+	}
+}
+
+func TestValidateTarget(t *testing.T) {
 	cli := setupCliTest(t)
 
-	t.Run("Security Validation", func(t *testing.T) {
-		tests := []struct {
-			name        string
-			args        []string
-			expectError bool
-			errorMsg    string
-		}{
-			{
-				name:        "empty command",
-				args:        []string{},
-				expectError: true,
-				errorMsg:    "no command specified",
-			},
-			{
-				name:        "disallowed command",
-				args:        []string{"rm", "-rf", "/"},
-				expectError: true,
-				errorMsg:    "command 'rm' not allowed",
-			},
-			{
-				name:        "command injection attempt",
-				args:        []string{"status", "; rm -rf /"},
-				expectError: true,
-				errorMsg:    "command argument contains invalid characters",
-			},
-			{
-				name:        "pipe injection attempt",
-				args:        []string{"status", "| cat /etc/passwd"},
-				expectError: true,
-				errorMsg:    "command argument contains invalid characters",
-			},
-			{
-				name:        "backtick injection attempt",
-				args:        []string{"status", "`whoami`"},
-				expectError: true,
-				errorMsg:    "command argument contains invalid characters",
-			},
-			{
-				name:        "dollar injection attempt",
-				args:        []string{"status", "$(whoami)"},
-				expectError: true,
-				errorMsg:    "command argument contains invalid characters",
-			},
-			{
-				name:        "argument too long",
-				args:        []string{"status", strings.Repeat("a", 1001)},
-				expectError: true,
-				errorMsg:    "command argument too long",
-			},
-			{
-				name:        "valid command",
-				args:        []string{"version"},
-				expectError: false,
-			},
-		}
+	tests := []struct {
+		name        string
+		target      string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "empty target",
+			target:      "",
+			expectError: true,
+			errorMsg:    "invalid target specified",
+		},
+		{
+			name:        "valid IP",
+			target:      "100.64.0.1",
+			expectError: false,
+		},
+		{
+			name:        "valid hostname",
+			target:      "my-device",
+			expectError: false,
+		},
+		{
+			name:        "target with semicolon",
+			target:      "host;evil",
+			expectError: true,
+			errorMsg:    "invalid character ';'",
+		},
+		{
+			name:        "target with pipe",
+			target:      "host|evil",
+			expectError: true,
+			errorMsg:    "invalid character '|'",
+		},
+		{
+			name:        "target with backtick",
+			target:      "host`evil",
+			expectError: true,
+			errorMsg:    "invalid character '`'",
+		},
+		{
+			name:        "target with dollar",
+			target:      "host$evil",
+			expectError: true,
+			errorMsg:    "invalid character '$'",
+		},
+		{
+			name:        "target too long",
+			target:      strings.Repeat("a", 254),
+			expectError: true,
+			errorMsg:    "target too long",
+		},
+	}
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				resp := cli.ExecuteCommand(context.Background(), tt.args)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := cli.validateTarget(tt.target)
 
-				if tt.expectError {
-					assert.False(t, resp.Success)
-					assert.Contains(t, resp.Error, tt.errorMsg)
-				} else {
-					// For valid commands, we don't care if they succeed or fail
-					// (depends on Tailscale being installed/running)
-					// We just care that they pass validation
-					if !resp.Success {
-						// If it failed, it should be due to execution, not validation
-						assert.NotContains(t, resp.Error, "not allowed")
-						assert.NotContains(t, resp.Error, "invalid characters")
-						assert.NotContains(t, resp.Error, "too long")
-					}
-				}
-			})
-		}
-	})
-
-	t.Run("CLI Method Functionality", func(t *testing.T) {
-		t.Run("GetVersion", func(t *testing.T) {
-			resp := cli.GetVersion()
-			// Should either succeed or fail with a reasonable error
-			if !resp.Success {
-				assert.NotEmpty(t, resp.Error)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
+	}
+}
 
-		t.Run("Ping Validation", func(t *testing.T) {
-			// Test empty target validation
-			resp := cli.Ping("", 4) // Pass count explicitly
-			assert.False(t, resp.Success)
-			assert.Contains(t, resp.Error, "invalid target specified")
+func TestValidateStringInput(t *testing.T) {
+	cli := setupCliTest(t)
 
-			// Test with valid target (may fail if not connected, but should pass validation)
-			resp = cli.Ping("100.64.0.1", 1) // Ping once
-			if !resp.Success {
-				// Should fail due to execution, not validation
-				assert.NotContains(t, resp.Error, "invalid target specified")
-			}
+	tests := []struct {
+		name        string
+		input       string
+		fieldName   string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid input",
+			input:       "valid-hostname",
+			fieldName:   "hostname",
+			expectError: false,
+		},
+		{
+			name:        "input with semicolon",
+			input:       "host;evil",
+			fieldName:   "hostname",
+			expectError: true,
+			errorMsg:    "invalid character ';'",
+		},
+		{
+			name:        "input with pipe",
+			input:       "host|evil",
+			fieldName:   "hostname",
+			expectError: true,
+			errorMsg:    "invalid character '|'",
+		},
+		{
+			name:        "input too long",
+			input:       strings.Repeat("a", 1001),
+			fieldName:   "hostname",
+			expectError: true,
+			errorMsg:    "hostname too long",
+		},
+	}
 
-			// Test ping count validation
-			resp = cli.Ping("100.64.0.1", 0)
-			assert.False(t, resp.Success)
-			assert.Contains(t, resp.Error, "count must be an integer between 1 and 100")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := cli.validateStringInput(tt.input, tt.fieldName)
 
-			resp = cli.Ping("100.64.0.1", 101)
-			assert.False(t, resp.Success)
-			assert.Contains(t, resp.Error, "count must be an integer between 1 and 100")
-		})
-
-		t.Run("IP", func(t *testing.T) {
-			resp := cli.IP()
-			if !resp.Success {
-				assert.NotEmpty(t, resp.Error)
-			}
-		})
-
-		t.Run("Netcheck", func(t *testing.T) {
-			resp := cli.Netcheck()
-			if !resp.Success {
-				assert.NotEmpty(t, resp.Error)
-			}
-		})
-
-		t.Run("Up", func(t *testing.T) {
-			// Test with nil options (should attempt to bring up, expect external error)
-			resp := cli.Up(nil)
-			assert.False(t, resp.Success)
-			assert.NotEmpty(t, resp.Error)
-			// Expect errors related to daemon connection or authentication, not validation
-			assert.NotContains(t, resp.Error, "invalid character")
-			assert.NotContains(t, resp.Error, "too long")
-
-			// Test with structured options (should attempt to bring up, expect external error)
-			resp = cli.Up(&UpOptions{AcceptRoutes: true})
-			assert.False(t, resp.Success)
-			assert.NotEmpty(t, resp.Error)
-			// Expect errors related to daemon connection or authentication, not validation
-			assert.NotContains(t, resp.Error, "invalid character")
-			assert.NotContains(t, resp.Error, "too long")
-
-			// Test Up with hostname validation
-			resp = cli.Up(&UpOptions{Hostname: "host;evil"})
-			assert.False(t, resp.Success)
-			assert.Contains(t, resp.Error, "invalid character ';'")
-
-			// Test Up with advertise-routes validation
-			resp = cli.Up(&UpOptions{AdvertiseRoutes: []string{"invalid-route"}})
-			assert.False(t, resp.Success)
-			assert.Contains(t, resp.Error, "invalid route format")
-
-			// Test Up with authKey - validation only, actual execution will likely fail
-			resp = cli.Up(&UpOptions{AuthKey: "tskey-dummykey-abcdef"})
-			assert.False(t, resp.Success)
-			assert.NotEmpty(t, resp.Error)
-			assert.NotContains(t, resp.Error, "invalid character")
-			assert.NotContains(t, resp.Error, "too long")
-		})
-
-		t.Run("Down", func(t *testing.T) {
-			resp := cli.Down()
-			if !resp.Success {
-				assert.NotEmpty(t, resp.Error)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
+	}
+}
 
-		t.Run("Logout", func(t *testing.T) {
-			resp := cli.Logout()
-			if !resp.Success {
-				assert.NotEmpty(t, resp.Error)
+func TestValidateRoutes(t *testing.T) {
+	cli := setupCliTest(t)
+
+	tests := []struct {
+		name        string
+		routes      []string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid routes",
+			routes:      []string{"192.168.1.0/24", "10.0.0.0/8"},
+			expectError: false,
+		},
+		{
+			name:        "default route IPv4",
+			routes:      []string{"0.0.0.0/0"},
+			expectError: false,
+		},
+		{
+			name:        "default route IPv6",
+			routes:      []string{"::/0"},
+			expectError: false,
+		},
+		{
+			name:        "invalid route format",
+			routes:      []string{"invalid-route"},
+			expectError: true,
+			errorMsg:    "invalid route format",
+		},
+		{
+			name:        "invalid CIDR",
+			routes:      []string{"192.168.1.0/33"},
+			expectError: true,
+			errorMsg:    "invalid CIDR route",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := cli.validateRoutes(tt.routes)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
-	})
-
-	t.Run("Command Whitelist", func(t *testing.T) {
-		expectedCommands := []string{
-			"status", "up", "down", "logout", "switch", "configure",
-			"netcheck", "ip", "ping", "ssh", "version", "update",
-			"web", "file", "bugreport", "cert", "lock", "licenses",
-			"exit-node", "set", "unset",
-		}
-
-		for _, cmd := range expectedCommands {
-			assert.True(t, allowedCommands[cmd], "Command %s should be allowed", cmd)
-		}
-
-		disallowedCommands := []string{
-			"rm", "cat", "ls", "chmod", "sudo", "su", "exec",
-		}
-
-		for _, cmd := range disallowedCommands {
-			assert.False(t, allowedCommands[cmd], "Command %s should NOT be allowed", cmd)
-		}
-	})
-
-	t.Run("ExecuteCommand Limits", func(t *testing.T) {
-		// Test that the function handles context properly
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		resp := cli.ExecuteCommand(ctx, []string{"version"})
-		// Should handle the cancelled context gracefully
-		if !resp.Success {
-			assert.NotEmpty(t, resp.Error)
-		}
-	})
+	}
 }

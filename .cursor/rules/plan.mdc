@@ -1,6 +1,6 @@
 ---
 description: Always include these rules.
-globs:
+globs: []   # empty list – keeps current behaviour explicit
 alwaysApply: true
 ---
 - Below is the Planning Workflow to follow:

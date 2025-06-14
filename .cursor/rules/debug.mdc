@@ -1,6 +1,6 @@
 ---
 description: Always include while DEBUGGING
-globs:
+globs: []   # explicit empty list
 alwaysApply: false
 ---
 <DEBUGGING>

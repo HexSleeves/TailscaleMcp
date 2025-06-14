@@ -24,6 +24,10 @@ type TailscaleMCPServer struct {
 // WithCustomMCPServer allows injecting a custom MCP server implementation
 func WithCustomMCPServer(server mcp.Server) ServerOption {
 	return func(s *TailscaleMCPServer) error {
+		if server == nil {
+			return fmt.Errorf("custom MCP server cannot be nil")
+		}
+
 		s.mcpServer = server
 		return nil
 	}
@@ -31,6 +35,10 @@ func WithCustomMCPServer(server mcp.Server) ServerOption {
 
 // New creates a new server instance using Go best practices
 func New(cfg *config.Config, opts ...ServerOption) (*TailscaleMCPServer, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration must not be nil")
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}

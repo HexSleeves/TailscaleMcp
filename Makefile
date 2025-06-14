@@ -5,7 +5,7 @@ BINARY_NAME=tailscale-mcp-server
 BUILD_DIR=dist
 CMD_DIR=cmd/tailscale-mcp-server
 VERSION?=dev
-LDFLAGS=-ldflags "-X main.version=$(VERSION)"
+LDFLAGS=-X main.version=$(VERSION)
 
 # Go settings
 GOOS?=$(shell go env GOOS)
@@ -43,11 +43,15 @@ run-dev: ## Run with go run for development
 
 test: test-unit test-integration ## Run all tests
 
-test-unit: ## Run unit tests
-	go test -v -race -coverprofile=coverage.out ./...
+test-unit: ## Run unit tests only
+	go test -v -race -coverprofile=coverage.out ./internal/... ./pkg/... ./cmd/...
 
-test-integration: ## Run integration tests (requires Tailscale CLI)
-	@echo "Running integration tests (requires Tailscale CLI)..."
+test-integration: ## Run integration tests
+	@echo "Running integration tests..."
+	go test -v -race -tags=integration ./test/integration/...
+
+test-all: ## Run all tests including integration
+	go test -v -race -coverprofile=coverage.out ./internal/... ./pkg/... ./cmd/...
 	go test -v -race -tags=integration ./test/integration/...
 
 test-coverage: test-unit ## Generate test coverage report

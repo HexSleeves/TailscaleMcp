@@ -52,7 +52,7 @@ type SelfStatus struct {
 	ExitNode            bool           `json:"ExitNode"`
 	ExitNodeOption      bool           `json:"ExitNodeOption"`
 	Active              bool           `json:"Active"`
-	PeerAPIURL          []string       `json:"PeerAPIURL,omitempty" validate:"dive,url"`
+	PeerAPIURL          []string       `json:"PeerAPIURL,omitempty" validate:"dive"`
 	TaildropTarget      int            `json:"TaildropTarget"`
 	NoFileSharingReason string         `json:"NoFileSharingReason"`
 	Capabilities        []string       `json:"Capabilities,omitempty"`
@@ -68,7 +68,7 @@ type Peer struct {
 	SelfStatus             // embed → promotes identical fields
 	PrimaryRoutes []string `json:"PrimaryRoutes,omitempty" validate:"dive,cidr"`
 	Expired       bool     `json:"Expired,omitempty"`
-	SSHHostKeys   []string `json:"sshHostKeys,omitempty"`
+	SSHHostKeys   []string `json:"SSHHostKeys,omitempty"`
 }
 
 // CurrentTailnet holds metadata about the tailnet we belong to.

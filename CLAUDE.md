@@ -7,10 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Build and Development
 
 ```bash
-npm run build           # Build the project
-npm run build:watch     # Build with file watching
-npm run dev:direct      # Fast development with tsx
-npm run dev:watch       # Auto-rebuild on changes
+ make build              # Build the Go binary
+ make run-dev            # Run with `go run` for fast feedback
+ make build-all          # Cross-compile for all target platforms
 ```
 
 ### Testing
@@ -46,19 +45,7 @@ This is a **Model Context Protocol (MCP) server** that provides Tailscale integr
 
 ### Core Components
 
-- **Entry Point**: `src/index.ts` → `src/cli.ts` - CLI interface and signal handling
-- **Server Core**: `src/server.ts` - Main server implementation with dual-mode support (stdio/http)
-- **Tool System**: `src/tools/` - Modular tool registry with Zod validation
-  - `device-tools.ts` - Device management (list, authorize, routes)
-  - `network-tools.ts` - Network operations (connect, disconnect, ping)
-  - `acl-tools.ts` - Access control lists
-  - `admin-tools.ts` - Administrative functions
-- **Tailscale Integration**: `src/tailscale/`
-  - `tailscale-api.ts` - REST API client using Axios
-  - `tailscale-cli.ts` - CLI command wrapper
-- **Infrastructure**:
-  - `src/logger.ts` - Centralized logging
-  - `src/types.ts` - Core type definitions
+
 
 ### Key Patterns
 

@@ -107,6 +107,7 @@ func NewTailscaleCLI() (*TailscaleCLI, error) {
 func (c *TailscaleCLI) ExecuteCommand(
 	parent context.Context,
 	args []string,
+	env []string,
 ) CLIResponse[string] {
 	// --- command validation --------------------------------------------------
 	if len(args) == 0 {
@@ -151,6 +152,12 @@ func (c *TailscaleCLI) ExecuteCommand(
 
 	cmd := exec.CommandContext(ctx, c.tailscalePath, args...)
 	setWinAttrs(cmd) // hides console on Windows, no-op elsewhere
+
+	// Apply additional environment variables
+	if len(env) > 0 {
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, env...)
+	}
 
 	// Capture + limit stdout/stderr to 10 MB each.
 	var (
@@ -235,7 +242,7 @@ func coalesce(s, fallback string) string {
 
 // Get Tailscale status
 func (c *TailscaleCLI) GetStatus() CLIResponse[cli.TailscaleStatus] {
-	raw := c.ExecuteCommand(context.Background(), []string{"status", "--json"})
+	raw := c.ExecuteCommand(context.Background(), []string{"status", "--json"}, nil)
 	if !raw.Success {
 		return CLIResponse[cli.TailscaleStatus]{
 			Success: false,
@@ -262,7 +269,7 @@ func (c *TailscaleCLI) GetStatus() CLIResponse[cli.TailscaleStatus] {
 
 // GetVersion gets the Tailscale version
 func (c *TailscaleCLI) GetVersion() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"version"})
+	return c.ExecuteCommand(context.Background(), []string{"version"}, nil)
 }
 
 // UpOptions defines options for the Up command
@@ -279,6 +286,7 @@ type UpOptions struct {
 // Up brings Tailscale up with structured options
 func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
 	args := []string{"up"}
+	env := []string{}
 
 	if options != nil {
 		if options.LoginServer != "" {
@@ -326,9 +334,9 @@ func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
 					Error:   err.Error(),
 				}
 			}
-			// Auth key passed securely via exec.Command
-			logger.Debugf("Auth key passed securely via exec.Command")
-			args = append(args, "--authkey", options.AuthKey)
+			// Pass auth key securely via environment variable
+			logger.Debugf("Auth key passed securely via TS_AUTHKEY environment variable")
+			env = append(env, "TS_AUTHKEY="+options.AuthKey)
 		}
 
 		if options.Timeout > 0 {
@@ -336,23 +344,23 @@ func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
 		}
 	}
 
-	return c.ExecuteCommand(context.Background(), args)
+	return c.ExecuteCommand(context.Background(), args, env)
 }
 
 // UpSimple brings Tailscale up with optional string arguments (for backward compatibility)
 func (c *TailscaleCLI) UpSimple(args ...string) CLIResponse[string] {
 	cmdArgs := append([]string{"up"}, args...)
-	return c.ExecuteCommand(context.Background(), cmdArgs)
+	return c.ExecuteCommand(context.Background(), cmdArgs, nil)
 }
 
 // Down brings Tailscale down
 func (c *TailscaleCLI) Down() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"down"})
+	return c.ExecuteCommand(context.Background(), []string{"down"}, nil)
 }
 
 // Logout logs out of Tailscale
 func (c *TailscaleCLI) Logout() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"logout"})
+	return c.ExecuteCommand(context.Background(), []string{"logout"}, nil)
 }
 
 // Ping pings a Tailscale peer with an optional count
@@ -372,17 +380,17 @@ func (c *TailscaleCLI) Ping(target string, count int) CLIResponse[string] {
 	}
 
 	cmdArgs := []string{"ping", target, "-c", fmt.Sprintf("%d", count)}
-	return c.ExecuteCommand(context.Background(), cmdArgs)
+	return c.ExecuteCommand(context.Background(), cmdArgs, nil)
 }
 
 // IP gets the Tailscale IP addresses
 func (c *TailscaleCLI) IP() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"ip"})
+	return c.ExecuteCommand(context.Background(), []string{"ip"}, nil)
 }
 
 // Netcheck runs network connectivity check
 func (c *TailscaleCLI) Netcheck() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"netcheck"})
+	return c.ExecuteCommand(context.Background(), []string{"netcheck"}, nil)
 }
 
 // SetExitNode sets or clears the exit node
@@ -401,7 +409,7 @@ func (c *TailscaleCLI) SetExitNode(nodeID string) CLIResponse[string] {
 		args = append(args, "--exit-node=") // Clear exit node
 	}
 
-	return c.ExecuteCommand(context.Background(), args)
+	return c.ExecuteCommand(context.Background(), args, nil)
 }
 
 // SetShieldsUp enables or disables shields up mode
@@ -410,12 +418,12 @@ func (c *TailscaleCLI) SetShieldsUp(enabled bool) CLIResponse[string] {
 	if enabled {
 		val = "true"
 	}
-	return c.ExecuteCommand(context.Background(), []string{"set", "--shields-up", val})
+	return c.ExecuteCommand(context.Background(), []string{"set", "--shields-up", val}, nil)
 }
 
 // IsAvailable checks if the Tailscale CLI is available
 func (c *TailscaleCLI) IsAvailable() CLIResponse[bool] {
-	resp := c.ExecuteCommand(context.Background(), []string{"version"})
+	resp := c.ExecuteCommand(context.Background(), []string{"version"}, nil)
 	return CLIResponse[bool]{
 		Success: resp.Success,
 		Error:   resp.Error,

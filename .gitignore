@@ -61,13 +61,10 @@ yarn-error.log*
 dev-debug.log
 # Dependency directories
 node_modules/
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+…
+# IDE / Editor settings
+.vscode/
+.idea/
 *.sw?
 # OS specific
 # Task files

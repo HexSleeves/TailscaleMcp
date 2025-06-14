@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+# description: Lessons learned from the TypeScript → Go migration.
+# globs: migration-docs/**, internal/**, pkg/**
 alwaysApply: false
 ---
 # Lessons Learned - Tailscale MCP Server Go Migration
