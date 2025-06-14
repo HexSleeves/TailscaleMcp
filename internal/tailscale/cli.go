@@ -82,21 +82,41 @@ func NewTailscaleCLI() (*TailscaleCLI, error) {
 		}
 
 		// Make sure it actually exists & is executable.
-		if st, err := os.Stat(abs); err != nil || st.IsDir() ||
-			st.Mode()&0111 == 0 {
-			logger.Errorf("TAILSCALE_PATH is not an executable: %s", abs)
+		if st, err := os.Stat(abs); err != nil {
+			logger.Errorf("TAILSCALE_PATH does not exist: %s", abs)
+			return nil, err
+		} else if st.IsDir() {
+			err := fmt.Errorf("TAILSCALE_PATH is a directory, not an executable: %s", abs)
+			logger.Errorf("%s", err.Error())
+			return nil, err
+		} else if st.Mode()&0111 == 0 {
+			err := fmt.Errorf("TAILSCALE_PATH is not executable: %s", abs)
+			logger.Errorf("%s", err.Error())
 			return nil, err
 		}
 		path = abs
 
-	// 2. Fallback: search `$PATH`.
+	// 2. Fallback: search `$PATH` first, then common installation paths.
 	default:
-		look, err := exec.LookPath("tailscale") // same as your getCommandPath
-		if err != nil {
-			logger.Errorf("tailscale binary not found in PATH (and TAILSCALE_PATH unset)")
-			return nil, err
+		if look, err := exec.LookPath("tailscale"); err == nil {
+			path = look
+		} else {
+			// Try platform-specific fallback paths
+			fallbackPaths := getTailscaleFallbackPaths()
+			var found bool
+			for _, fallbackPath := range fallbackPaths {
+				if isExecutableFile(fallbackPath) {
+					path = fallbackPath
+					found = true
+					logger.Debugf("Found tailscale binary at fallback path: %s", fallbackPath)
+					break
+				}
+			}
+			if !found {
+				logger.Errorf("tailscale binary not found in PATH or common installation paths")
+				return nil, fmt.Errorf("tailscale binary not found")
+			}
 		}
-		path = look
 	}
 
 	return &TailscaleCLI{tailscalePath: path}, nil
@@ -195,45 +215,6 @@ func (c *TailscaleCLI) ExecuteCommand(
 		Stderr:  stderrStr,
 		Data:    strings.TrimSpace(outBuf.String()),
 	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// helpers
-////////////////////////////////////////////////////////////////////////////////
-
-// limitWriter stops writing once the limit is reached and returns an error to
-// the caller (propagates to exec.Command.Run()).
-type limitWriter struct {
-	w     *bytes.Buffer
-	n     int
-	limit int
-}
-
-func newLimitWriter(w *bytes.Buffer, limit int) *limitWriter {
-	return &limitWriter{w: w, limit: limit}
-}
-
-func (l *limitWriter) Write(p []byte) (int, error) {
-	if l.n+len(p) > l.limit {
-		// write only the remaining bytes so we don't exceed the slice capacity
-		remaining := l.limit - l.n
-		if remaining > 0 {
-			l.w.Write(p[:remaining])
-			l.n += remaining
-		}
-		return remaining, fmt.Errorf("output exceeds %d bytes", l.limit)
-	}
-	n, err := l.w.Write(p)
-	l.n += n
-	return n, err
-}
-
-// coalesce returns the first non-empty string—handy for defaulting errors.
-func coalesce(s, fallback string) string {
-	if s != "" {
-		return s
-	}
-	return fallback
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@ package tailscale
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -282,5 +283,176 @@ func TestValidateRoutes(t *testing.T) {
 				assert.NoError(t, err)
 			}
 		})
+	}
+}
+
+// TestGetTailscaleFallbackPaths tests platform-specific fallback paths
+func TestGetTailscaleFallbackPaths(t *testing.T) {
+	paths := getTailscaleFallbackPaths()
+	assert.NotEmpty(t, paths, "Should return at least one fallback path")
+
+	// Test that paths are platform-specific
+	switch runtime.GOOS {
+	case "windows":
+		assert.Contains(t, paths[0], "Program Files")
+		assert.Contains(t, paths[0], "tailscale.exe")
+	case "darwin":
+		assert.Contains(t, paths, "/usr/local/bin/tailscale")
+		assert.Contains(t, paths, "/opt/homebrew/bin/tailscale")
+	default:
+		assert.Contains(t, paths, "/usr/bin/tailscale")
+		assert.Contains(t, paths, "/usr/local/bin/tailscale")
+	}
+}
+
+// TestIsExecutableFile tests the executable file detection
+func TestIsExecutableFile(t *testing.T) {
+	// Create temporary directory and files for testing
+	tmpDir := t.TempDir()
+
+	// Create an executable file
+	executablePath := filepath.Join(tmpDir, "executable")
+	require.NoError(t, os.WriteFile(executablePath, []byte("#!/bin/sh\necho test"), 0755))
+
+	// Create a non-executable file
+	nonExecutablePath := filepath.Join(tmpDir, "nonexecutable")
+	require.NoError(t, os.WriteFile(nonExecutablePath, []byte("content"), 0644))
+
+	// Create a directory
+	dirPath := filepath.Join(tmpDir, "directory")
+	require.NoError(t, os.Mkdir(dirPath, 0755))
+
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{
+			name:     "executable file",
+			path:     executablePath,
+			expected: true,
+		},
+		{
+			name:     "non-executable file",
+			path:     nonExecutablePath,
+			expected: false,
+		},
+		{
+			name:     "directory",
+			path:     dirPath,
+			expected: false,
+		},
+		{
+			name:     "non-existent file",
+			path:     filepath.Join(tmpDir, "nonexistent"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isExecutableFile(tt.path)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestNewTailscaleCLI_WithEnvironmentVariable tests CLI creation with TAILSCALE_PATH set
+func TestNewTailscaleCLI_WithEnvironmentVariable(t *testing.T) {
+	// Save original environment
+	oldPath := os.Getenv("TAILSCALE_PATH")
+	defer func() {
+		if oldPath == "" {
+			os.Unsetenv("TAILSCALE_PATH")
+		} else {
+			os.Setenv("TAILSCALE_PATH", oldPath)
+		}
+	}()
+
+	// Initialize logger for tests
+	err := logger.Initialize(0, "")
+	require.NoError(t, err)
+
+	// Create a temporary executable
+	tmpDir := t.TempDir()
+	tailscalePath := filepath.Join(tmpDir, "tailscale")
+	require.NoError(t, os.WriteFile(tailscalePath, []byte("#!/bin/sh\necho test"), 0755))
+
+	// Test with valid TAILSCALE_PATH
+	require.NoError(t, os.Setenv("TAILSCALE_PATH", tailscalePath))
+	cli, err := NewTailscaleCLI()
+	assert.NoError(t, err)
+	assert.NotNil(t, cli)
+	assert.Equal(t, tailscalePath, cli.tailscalePath)
+
+	// Test with invalid TAILSCALE_PATH (non-existent file)
+	invalidPath := filepath.Join(tmpDir, "nonexistent")
+	require.NoError(t, os.Setenv("TAILSCALE_PATH", invalidPath))
+	cli, err = NewTailscaleCLI()
+	assert.Error(t, err)
+	assert.Nil(t, cli)
+
+	// Test with invalid TAILSCALE_PATH (directory)
+	require.NoError(t, os.Setenv("TAILSCALE_PATH", tmpDir))
+	cli, err = NewTailscaleCLI()
+	assert.Error(t, err)
+	assert.Nil(t, cli)
+
+	// Test with invalid TAILSCALE_PATH (non-executable file)
+	nonExecPath := filepath.Join(tmpDir, "nonexec")
+	require.NoError(t, os.WriteFile(nonExecPath, []byte("content"), 0644))
+	require.NoError(t, os.Setenv("TAILSCALE_PATH", nonExecPath))
+	cli, err = NewTailscaleCLI()
+	assert.Error(t, err)
+	assert.Nil(t, cli)
+}
+
+// TestNewTailscaleCLI_FallbackPaths tests CLI creation with fallback path resolution
+func TestNewTailscaleCLI_FallbackPaths(t *testing.T) {
+	// Save and clear environment variables that might interfere
+	oldTailscalePath := os.Getenv("TAILSCALE_PATH")
+	oldPATH := os.Getenv("PATH")
+	defer func() {
+		if oldTailscalePath == "" {
+			os.Unsetenv("TAILSCALE_PATH")
+		} else {
+			os.Setenv("TAILSCALE_PATH", oldTailscalePath)
+		}
+		os.Setenv("PATH", oldPATH)
+	}()
+
+	os.Unsetenv("TAILSCALE_PATH")
+	
+	// Initialize logger for tests
+	err := logger.Initialize(0, "")
+	require.NoError(t, err)
+
+	// Set PATH to empty to force fallback path usage
+	require.NoError(t, os.Setenv("PATH", ""))
+	
+	// Test that NewTailscaleCLI uses fallback paths when PATH lookup fails
+	cli, err := NewTailscaleCLI()
+	
+	// The test result depends on whether a real Tailscale binary exists at fallback paths
+	// If found at a fallback path, it should succeed; otherwise, it should fail gracefully
+	if err != nil {
+		// No binary found at fallback paths - this is expected in CI environments
+		assert.Nil(t, cli)
+		assert.Contains(t, err.Error(), "tailscale binary not found")
+	} else {
+		// Binary found at a fallback path - verify it's a valid path
+		assert.NotNil(t, cli)
+		assert.NotEmpty(t, cli.tailscalePath)
+		
+		// Verify the path is one of the expected fallback paths
+		fallbackPaths := getTailscaleFallbackPaths()
+		found := false
+		for _, fallbackPath := range fallbackPaths {
+			if cli.tailscalePath == fallbackPath {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "CLI should use one of the fallback paths: %v, got: %s", fallbackPaths, cli.tailscalePath)
 	}
 }

@@ -12,9 +12,9 @@ import (
 )
 
 var (
+	initialized  bool
 	globalLogger *zap.Logger
 	loggerMutex  sync.RWMutex
-	initialized  bool
 )
 
 // Initialize sets up the global logger with the specified level and optional file output
@@ -67,11 +67,29 @@ func Initialize(level int, logFile string) error {
 		config.Level = zap.NewAtomicLevelAt(zapLevel)
 	}
 
-	// Set encoding format
-	if logFormat := os.Getenv("LOG_FORMAT"); strings.ToLower(logFormat) == "console" {
-		config.Encoding = "console"
-	} else {
+	// ---------------------------------------------------------------------
+	// Encoder / format configuration
+	// ---------------------------------------------------------------------
+	// Human-readable logs are now the default using zap's console encoder.
+	// If structured JSON output is explicitly desired, set LOG_FORMAT=json.
+	// Any other value (including empty) results in console encoding.
+
+	switch strings.ToLower(os.Getenv("LOG_FORMAT")) {
+	case "json":
 		config.Encoding = "json"
+	default:
+		config.Encoding = "console"
+	}
+
+	// Improve console readability with coloured, capital levels irrespective
+	// of dev / prod mode.go test ./... | cat
+	if config.Encoding == "console" {
+		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+		// Align time formatting across modes for consistency.
+		if config.EncoderConfig.EncodeTime == nil {
+			config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
+		}
 	}
 
 	// Set output paths
@@ -83,7 +101,9 @@ func Initialize(level int, logFile string) error {
 		config.ErrorOutputPaths = append(config.ErrorOutputPaths, logFile)
 	}
 
-	// Build the logger
+	// ---------------------------------------------------------------------
+	// Build the final logger
+	// ---------------------------------------------------------------------
 	logger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zap.ErrorLevel))
 	if err != nil {
 		return fmt.Errorf("failed to build logger: %w", err)

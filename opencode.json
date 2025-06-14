@@ -1,0 +1,8 @@
+{
+  "mcp": {
+    "localmcp": {
+      "type": "local",
+      "command": ["bunx", "task-master"]
+    }
+  }
+}

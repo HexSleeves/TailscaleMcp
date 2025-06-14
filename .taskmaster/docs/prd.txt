@@ -1,0 +1,157 @@
+<context>
+# Overview
+The Tailscale MCP Server is a Model Context Protocol (MCP) server that provides comprehensive Tailscale integration capabilities. It solves the problem of managing Tailscale networks and devices programmatically by exposing Tailscale's CLI and REST API functionality through a standardized MCP interface. This enables AI assistants and other MCP clients to manage Tailscale infrastructure, monitor network status, and perform administrative tasks seamlessly.
+
+The target users are developers, system administrators, and AI assistants who need to interact with Tailscale networks programmatically. The value proposition is providing a unified, validated, and secure interface to Tailscale operations without requiring direct CLI or API knowledge.
+
+# Core Features
+1. **Device Management**
+   - List all devices in a tailnet with detailed information
+   - Enable/disable devices remotely
+   - Retrieve device status and connectivity information
+   - Important for network administration and monitoring
+   - Works through both CLI wrapper and REST API integration
+
+2. **Network Status Monitoring**
+   - Real-time network connectivity checks
+   - Peer status and routing information
+   - Network health diagnostics
+   - Critical for troubleshooting and monitoring
+   - Utilizes native Tailscale CLI status commands
+
+3. **Administrative Operations**
+   - User and device authentication management
+   - Access control and permission management
+   - Tailnet configuration updates
+   - Essential for enterprise management
+   - Leverages Tailscale REST API for administrative functions
+
+4. **Security Validation**
+   - Input sanitization for CLI command injection prevention
+   - API key validation and secure credential handling
+   - Rate limiting and error handling
+   - Prevents security vulnerabilities and ensures reliable operation
+   - Implements both Go custom validation and TypeScript Zod schemas
+
+# User Experience
+**User Personas:**
+- DevOps Engineers: Need programmatic access to manage Tailscale infrastructure
+- AI Assistants: Require structured interfaces to help users with network management
+- System Administrators: Want to automate Tailscale operations and monitoring
+
+**Key User Flows:**
+1. MCP Client Connection → Authentication → Tool Discovery → Operation Execution
+2. Device Management: List devices → Select device → Perform action (enable/disable)
+3. Network Monitoring: Check status → Analyze connectivity → Generate reports
+
+**UI/UX Considerations:**
+- Command-line interface with clear error messages
+- JSON-structured responses for programmatic consumption
+- Comprehensive logging for debugging and audit trails
+- Both stdio and HTTP server modes for different integration scenarios
+</context>
+
+<PRD>
+# Technical Architecture
+**System Components:**
+- Go Implementation (Primary): cmd/, internal/, pkg/ directories with Cobra CLI framework
+- TypeScript Implementation (Legacy): src/ directory with Node.js runtime
+- MCP Protocol Layer: Standardized communication interface
+- Tailscale Integration Layer: CLI wrapper and REST API client
+- Validation Layer: Input sanitization and schema validation
+
+**Data Models:**
+- Device representations with status, connectivity, and metadata
+- Network topology and routing information  
+- User and authentication data structures
+- Configuration and settings management
+
+**APIs and Integrations:**
+- Tailscale REST API for administrative operations
+- Tailscale CLI wrapper for system-level operations
+- MCP protocol for client communication
+- Standard input/output and HTTP server interfaces
+
+**Infrastructure Requirements:**
+- Tailscale CLI installation for local operations
+- API key configuration for REST operations
+- Environment variable management for credentials
+- Cross-platform compatibility (Linux, macOS, Windows)
+
+# Development Roadmap
+**Phase 1: Go Migration Completion**
+- Complete migration from TypeScript to Go implementation
+- Ensure feature parity between Go and TypeScript versions
+- Comprehensive testing suite for Go implementation
+- Cross-platform build and distribution setup
+
+**Phase 2: Enhanced Device Management**
+- Advanced device filtering and search capabilities
+- Bulk operations for multiple devices
+- Device grouping and tagging functionality
+- Historical device status tracking
+
+**Phase 3: Advanced Monitoring and Analytics**
+- Real-time network performance metrics
+- Connection quality monitoring
+- Usage analytics and reporting
+- Alert system for network issues
+
+**Phase 4: Enterprise Features**
+- Multi-tailnet support
+- Role-based access control integration
+- Audit logging and compliance features
+- Advanced configuration management
+
+# Logical Dependency Chain
+**Foundation (Must be built first):**
+1. Core MCP server infrastructure and protocol handling
+2. Basic Tailscale CLI integration with command validation
+3. Essential device listing and status operations
+4. Input validation and security measures
+
+**Incremental Development:**
+1. Basic device management operations (enable/disable)
+2. Network status monitoring capabilities
+3. REST API integration for administrative functions
+4. Error handling and logging improvements
+5. Testing infrastructure and coverage
+6. Documentation and examples
+
+**Build-Upon Strategy:**
+- Each tool/operation is atomic and independently testable
+- Shared infrastructure components enable rapid feature addition
+- Modular design allows for easy maintenance and updates
+- Progressive enhancement of existing capabilities
+
+# Risks and Mitigations
+**Technical Challenges:**
+- Risk: CLI command injection vulnerabilities
+- Mitigation: Comprehensive input validation and sanitization
+- Risk: API rate limiting and reliability
+- Mitigation: Retry logic, caching, and graceful degradation
+
+**MVP Scoping:**
+- Risk: Feature creep delaying core functionality
+- Mitigation: Focus on essential device management and status operations first
+- Risk: Complexity in dual-implementation maintenance
+- Mitigation: Prioritize Go implementation while maintaining TypeScript compatibility
+
+**Resource Constraints:**
+- Risk: Testing complexity across multiple platforms
+- Mitigation: Automated CI/CD pipeline with matrix testing
+- Risk: Documentation and example maintenance
+- Mitigation: Generated documentation and comprehensive test examples
+
+# Appendix
+**Research Findings:**
+- MCP protocol adoption growing rapidly in AI assistant ecosystem
+- Tailscale API provides comprehensive administrative capabilities
+- Cross-platform CLI wrapper complexity manageable with proper abstraction
+
+**Technical Specifications:**
+- Go 1.21+ required for modern language features
+- TypeScript/Node.js maintained for legacy compatibility
+- MCP protocol version compatibility requirements
+- Tailscale CLI version dependencies and compatibility matrix
+</PRD>
