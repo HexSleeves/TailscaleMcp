@@ -135,3 +135,14 @@ type DeviceListResponse struct {
 type AuthKeyListResponse struct {
 	Keys []AuthKey `json:"keys"`
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// CLI types
+////////////////////////////////////////////////////////////////////////////////
+
+type CLIResponse[T any] struct {
+	Success bool   `json:"success"`
+	Data    T      `json:"data,omitempty"`
+	Stderr  string `json:"stderr,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
