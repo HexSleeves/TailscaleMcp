@@ -12,12 +12,16 @@ var (
 	GitCommit = "unknown"
 	BuildTime = "unknown"
 	GoVersion = runtime.Version()
+	Platform  = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 )
 
 // Info returns formatted version information
 func Info() string {
-	return fmt.Sprintf("tailscale-mcp-server %s (commit: %s, built: %s, go: %s)",
-		Version, GitCommit, BuildTime, GoVersion)
+	output := fmt.Sprintf("Tailscale MCP Server [%s]\n", Version)
+	output += fmt.Sprintf("Built with [%s]\n", GoVersion)
+	output += fmt.Sprintf("Platform: [%s]\n", Platform)
+
+	return output
 }
 
 // Short returns just the version

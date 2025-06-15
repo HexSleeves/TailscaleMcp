@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -78,7 +80,8 @@ func runServer(cmd *cobra.Command, args []string) {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Fatal("Failed to load configuration", "error", err)
+		logger.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
 	// Initialize logger with verbose flag consideration
@@ -88,13 +91,15 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	if err := logger.Initialize(logLevel, cfg.LogFile); err != nil {
-		logger.Fatal("Failed to initialize logger", "error", err)
+		logger.Error("Failed to initialize logger", "error", err)
+		os.Exit(1)
 	}
 
 	// Create server
 	tailscaleMCPServer, err := server.New(cfg)
 	if err != nil {
-		logger.Fatal("Failed to create server", "error", err)
+		logger.Error("Failed to create server", "error", err)
+		os.Exit(1)
 	}
 
 	// Set up signal handling
@@ -124,12 +129,21 @@ func runServer(cmd *cobra.Command, args []string) {
 	case "http":
 		serverErr = tailscaleMCPServer.StartHTTP(ctx, httpPort)
 	default:
-		logger.Fatal("Invalid server mode", "mode", serverMode, "valid_modes", []string{"stdio", "http"})
+		logger.Error("Invalid server mode", "mode", serverMode, "valid_modes", []string{"stdio", "http"})
+		os.Exit(1)
 	}
 
+	// Check if the error is due to context cancellation (graceful shutdown)
 	if serverErr != nil {
-		logger.Fatal("Server error", "error", serverErr)
+		if serverErr == context.Canceled || errors.Is(serverErr, http.ErrServerClosed) {
+			logger.Info("Server stopped gracefully")
+			os.Exit(0) // Exit with code 0 on graceful shutdown
+		} else {
+			logger.Error("Server error", "error", serverErr)
+			os.Exit(1) // Exit with code 1 on actual errors
+		}
+	} else {
+		logger.Info("Server stopped")
+		os.Exit(0) // Exit with code 0 on clean stop
 	}
-
-	logger.Info("Server stopped")
 }

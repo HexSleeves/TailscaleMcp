@@ -38,27 +38,52 @@ func NewStdioServer(server mcp.Server) *StdioServer {
 func (s *StdioServer) Start(ctx context.Context) error {
 	logger.Info("Starting stdio MCP server")
 
+	// Channel to receive lines from stdin
+	lineChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	// Start a goroutine to read from stdin
+	go func() {
+		defer close(lineChan)
+		defer close(errChan)
+
+		for {
+			if !s.reader.Scan() {
+				if err := s.reader.Err(); err != nil {
+					errChan <- fmt.Errorf("stdin read error: %w", err)
+					return
+				}
+				// EOF reached
+				logger.Info("Stdin closed")
+				return
+			}
+
+			line := s.reader.Text()
+			if line != "" {
+				select {
+				case lineChan <- line:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	// Main event loop
 	for {
 		select {
 		case <-ctx.Done():
 			logger.Info("Stdio server shutting down")
 			return ctx.Err()
-		default:
-			if !s.reader.Scan() {
-				if err := s.reader.Err(); err != nil {
-					logger.Error("Error reading from stdin", "error", err)
-					return fmt.Errorf("stdin read error: %w", err)
-				}
-				// EOF reached
-				logger.Info("Stdin closed, shutting down")
-				return nil
+		case err := <-errChan:
+			if err != nil {
+				logger.Error("Error reading from stdin", "error", err)
+				return err
 			}
-
-			line := s.reader.Text()
-			if line == "" {
-				continue
-			}
-
+			// EOF reached, shutdown gracefully
+			logger.Info("Stdin closed, shutting down")
+			return nil
+		case line := <-lineChan:
 			logger.Debug("Received message", "message", line)
 
 			if err := s.handleMessage(ctx, line); err != nil {

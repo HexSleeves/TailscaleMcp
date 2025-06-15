@@ -21,15 +21,15 @@ var versionCmd = &cobra.Command{
 
 This is useful for debugging and support purposes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Tailscale MCP Server %s\n", version.Info())
-		fmt.Printf("Built with %s\n", runtime.Version())
-		fmt.Printf("Platform: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Printf("%s\n", version.Info())
 
 		if verbose {
+			fmt.Printf("--------------------------------\n")
 			// Additional verbose information
 			fmt.Printf("Go max procs: %d\n", runtime.GOMAXPROCS(0))
 			fmt.Printf("Go routines: %d\n", runtime.NumGoroutine())
 			fmt.Printf("Go compiler: %s\n", runtime.Compiler)
+			fmt.Printf("--------------------------------\n")
 		}
 	},
 }
