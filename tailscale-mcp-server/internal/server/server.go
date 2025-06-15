@@ -1,8 +1,10 @@
+// tailscale-mcp-server/internal/server/server.go
 package server
 
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/hexsleeves/tailscale-mcp-server/internal/config"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
@@ -17,10 +19,13 @@ type ServerOption func(*TailscaleMCPServer) error
 // TailscaleMCPServer implements the main MCP server logic
 // Follows Go idioms: composition over inheritance, interfaces for flexibility
 type TailscaleMCPServer struct {
+	mu        sync.RWMutex
 	config    *config.Config
 	api       *tailscale.APIClient
 	cli       *tailscale.TailscaleCLI
+	registry  *tools.ToolRegistry
 	mcpServer mcp.Server
+	running   bool
 }
 
 // WithCustomMCPServer allows injecting a custom MCP server implementation
@@ -31,6 +36,18 @@ func WithCustomMCPServer(server mcp.Server) ServerOption {
 		}
 
 		s.mcpServer = server
+		return nil
+	}
+}
+
+// WithCustomRegistry allows injecting a custom tool registry
+func WithCustomRegistry(registry *tools.ToolRegistry) ServerOption {
+	return func(s *TailscaleMCPServer) error {
+		if registry == nil {
+			return fmt.Errorf("custom registry cannot be nil")
+		}
+
+		s.registry = registry
 		return nil
 	}
 }
@@ -56,15 +73,15 @@ func New(cfg *config.Config, opts ...ServerOption) (*TailscaleMCPServer, error) 
 		return nil, fmt.Errorf("failed to create tailscale cli: %w", err)
 	}
 
-	// Create tool registry and register tools
+	// Create tool registry
 	registry := tools.NewToolRegistry(api, cli)
-	// TODO: Register tools here
 
 	// Create server with default MCP implementation
 	server := &TailscaleMCPServer{
-		config: cfg,
-		api:    api,
-		cli:    cli,
+		config:   cfg,
+		api:      api,
+		cli:      cli,
+		registry: registry,
 		mcpServer: mcp.NewMCPServer(
 			registry,
 			"tailscale-mcp-server",
@@ -82,16 +99,44 @@ func New(cfg *config.Config, opts ...ServerOption) (*TailscaleMCPServer, error) 
 	return server, nil
 }
 
-// StartStdio starts the server in stdio mode (Go way: create and start in one call)
+// StartStdio starts the server in stdio mode
 func (s *TailscaleMCPServer) StartStdio(ctx context.Context) error {
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return fmt.Errorf("server is already running")
+	}
+	s.running = true
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
+	}()
+
 	logger.Info("Starting stdio MCP server")
 
 	server := NewStdioServer(s.mcpServer)
 	return server.Start(ctx)
 }
 
-// StartHTTP starts the server in HTTP mode (Go way: create and start in one call)
+// StartHTTP starts the server in HTTP mode
 func (s *TailscaleMCPServer) StartHTTP(ctx context.Context, port int) error {
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return fmt.Errorf("server is already running")
+	}
+	s.running = true
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
+	}()
+
 	logger.Info("Starting HTTP MCP server", "port", port)
 
 	server := NewHTTPServer(s.mcpServer, port)
@@ -100,12 +145,51 @@ func (s *TailscaleMCPServer) StartHTTP(ctx context.Context, port int) error {
 
 // Shutdown gracefully shuts down the server
 func (s *TailscaleMCPServer) Shutdown(ctx context.Context) error {
-	logger.Info("Shutting down TailscaleMCPServer")
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if err := s.mcpServer.Shutdown(ctx, &mcp.ShutdownRequest{}); err != nil {
-		logger.Error("Error shutting down MCP server", "error", err)
-		return err
+	if !s.running {
+		return nil // Already stopped
 	}
 
+	logger.Info("Shutting down TailscaleMCPServer")
+
+	// Shutdown MCP server
+	if err := s.mcpServer.Shutdown(ctx, &mcp.ShutdownRequest{}); err != nil {
+		logger.Error("Error shutting down MCP server", "error", err)
+		return fmt.Errorf("failed to shutdown MCP server: %w", err)
+	}
+
+	// Close tool registry
+	if err := s.registry.Close(); err != nil {
+		logger.Error("Error closing tool registry", "error", err)
+		return fmt.Errorf("failed to close tool registry: %w", err)
+	}
+
+	s.running = false
 	return nil
+}
+
+// IsRunning returns true if the server is currently running
+func (s *TailscaleMCPServer) IsRunning() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.running
+}
+
+// Config returns a copy of the server configuration
+func (s *TailscaleMCPServer) Config() *config.Config {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Return a copy to prevent external modification
+	configCopy := *s.config
+	return &configCopy
+}
+
+// ToolCount returns the number of registered tools
+func (s *TailscaleMCPServer) ToolCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.registry.Count()
 }

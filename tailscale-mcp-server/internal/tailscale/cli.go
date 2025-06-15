@@ -1,3 +1,4 @@
+// tailscale-mcp-server/internal/tailscale/cli.go
 package tailscale
 
 import (
@@ -14,7 +15,7 @@ import (
 	"time"
 
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
-	"github.com/hexsleeves/tailscale-mcp-server/pkg/cli"
+	"github.com/hexsleeves/tailscale-mcp-server/pkg/schema"
 )
 
 const (
@@ -69,6 +70,26 @@ type TailscaleCLI struct {
 	tailscalePath string
 }
 
+// CLIError represents an error that occurred during CLI execution
+type CLIError struct {
+	Command    string
+	Args       []string
+	ExitCode   int
+	Stderr     string
+	Underlying error
+}
+
+func (e *CLIError) Error() string {
+	if e.Underlying != nil {
+		return fmt.Sprintf("tailscale %s failed: %v", e.Command, e.Underlying)
+	}
+	return fmt.Sprintf("tailscale %s failed with exit code %d: %s", e.Command, e.ExitCode, e.Stderr)
+}
+
+func (e *CLIError) Unwrap() error {
+	return e.Underlying
+}
+
 func NewTailscaleCLI() (*TailscaleCLI, error) {
 	path := os.Getenv("TAILSCALE_PATH")
 
@@ -77,21 +98,21 @@ func NewTailscaleCLI() (*TailscaleCLI, error) {
 	case path != "":
 		abs, err := filepath.Abs(path)
 		if err != nil {
-			logger.Errorf("invalid TAILSCALE_PATH: %w", err)
-			return nil, err
+			logger.Error("invalid TAILSCALE_PATH", "path", path, "error", err)
+			return nil, fmt.Errorf("invalid TAILSCALE_PATH %q: %w", path, err)
 		}
 
 		// Make sure it actually exists & is executable.
 		if st, err := os.Stat(abs); err != nil {
-			logger.Errorf("TAILSCALE_PATH does not exist: %s", abs)
-			return nil, err
+			logger.Error("TAILSCALE_PATH does not exist", "path", abs, "error", err)
+			return nil, fmt.Errorf("TAILSCALE_PATH does not exist: %s", abs)
 		} else if st.IsDir() {
 			err := fmt.Errorf("TAILSCALE_PATH is a directory, not an executable: %s", abs)
-			logger.Errorf("%s", err.Error())
+			logger.Error("TAILSCALE_PATH validation failed", "error", err)
 			return nil, err
 		} else if st.Mode()&0111 == 0 {
 			err := fmt.Errorf("TAILSCALE_PATH is not executable: %s", abs)
-			logger.Errorf("%s", err.Error())
+			logger.Error("TAILSCALE_PATH validation failed", "error", err)
 			return nil, err
 		}
 		path = abs
@@ -108,12 +129,12 @@ func NewTailscaleCLI() (*TailscaleCLI, error) {
 				if isExecutableFile(fallbackPath) {
 					path = fallbackPath
 					found = true
-					logger.Debugf("Found tailscale binary at fallback path: %s", fallbackPath)
+					logger.Debug("Found tailscale binary at fallback path", "path", fallbackPath)
 					break
 				}
 			}
 			if !found {
-				logger.Errorf("tailscale binary not found in PATH or common installation paths")
+				logger.Error("tailscale binary not found in PATH or common installation paths")
 				return nil, fmt.Errorf("tailscale binary not found")
 			}
 		}
@@ -125,58 +146,45 @@ func NewTailscaleCLI() (*TailscaleCLI, error) {
 // ExecuteCommand runs the Tailscale CLI with validation, timeout, buffer limit
 // and Windows-window hiding just like the TS version.
 func (c *TailscaleCLI) ExecuteCommand(
-	parent context.Context,
+	ctx context.Context,
 	args []string,
 	env []string,
-) CLIResponse[string] {
+) (string, error) {
 	// --- command validation --------------------------------------------------
 	if len(args) == 0 {
-		return CLIResponse[string]{
-			Success: false,
-			Error:   "no command specified",
-		}
+		return "", errors.New("no command specified")
 	}
 
 	// Validate the command is in our whitelist
 	command := args[0]
 	if !allowedCommands[command] {
-		return CLIResponse[string]{
-			Success: false,
-			Error:   fmt.Sprintf("command '%s' not allowed", command),
-		}
+		return "", fmt.Errorf("command %q not allowed", command)
 	}
 
 	// --- argument validation -------------------------------------------------
-	for _, a := range args {
+	for i, a := range args {
 		if len(a) > maxArgLen {
-			return CLIResponse[string]{
-				Success: false,
-				Error:   "command argument too long",
-			}
+			return "", fmt.Errorf("argument %d too long (%d chars)", i, len(a))
 		}
 
 		// Basic injection prevention - reject arguments with suspicious characters
 		if strings.ContainsAny(a, ";&|`$(){}[]<>") {
-			return CLIResponse[string]{
-				Success: false,
-				Error:   "command argument contains invalid characters",
-			}
+			return "", fmt.Errorf("argument %d contains invalid characters: %q", i, a)
 		}
 	}
 
-	logger.Debugf("Executing: %s %s", c.tailscalePath, strings.Join(args, " "))
+	logger.Debug("Executing tailscale command", "path", c.tailscalePath, "args", args)
 
 	// --- build exec.Command --------------------------------------------------
-	ctx, cancel := context.WithTimeout(parent, timeout)
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, c.tailscalePath, args...)
+	cmd := exec.CommandContext(execCtx, c.tailscalePath, args...)
 	setWinAttrs(cmd) // hides console on Windows, no-op elsewhere
 
 	// Apply additional environment variables
 	if len(env) > 0 {
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, env...)
+		cmd.Env = append(os.Environ(), env...)
 	}
 
 	// Capture + limit stdout/stderr to 10 MB each.
@@ -192,64 +200,57 @@ func (c *TailscaleCLI) ExecuteCommand(
 
 	stderrStr := strings.TrimSpace(errBuf.String())
 	if stderrStr != "" {
-		logger.Warnf("CLI stderr: %s", stderrStr)
+		logger.Warn("CLI stderr", "stderr", stderrStr)
 	}
 
-	// --- build response ------------------------------------------------------
+	// --- handle errors -------------------------------------------------------
 	if err != nil {
-		// ctx.Err() will be non-nil if we hit the timeout.
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			err = fmt.Errorf("command timed out after %s", timeout)
+		cliErr := &CLIError{
+			Command:    command,
+			Args:       args,
+			Stderr:     stderrStr,
+			Underlying: err,
 		}
 
-		logger.Errorf("CLI command failed: %v", err)
-		return CLIResponse[string]{
-			Success: false,
-			Error:   err.Error(),
-			Stderr:  stderrStr,
+		// Check for timeout
+		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
+			cliErr.Underlying = fmt.Errorf("command timed out after %s", timeout)
 		}
+
+		// Extract exit code if available
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			cliErr.ExitCode = exitErr.ExitCode()
+		}
+
+		logger.Error("CLI command failed", "command", command, "args", args, "error", err)
+		return "", cliErr
 	}
 
-	return CLIResponse[string]{
-		Success: true,
-		Stderr:  stderrStr,
-		Data:    strings.TrimSpace(outBuf.String()),
-	}
+	return strings.TrimSpace(outBuf.String()), nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // CLI methods
 ////////////////////////////////////////////////////////////////////////////////
 
-// Get Tailscale status
-func (c *TailscaleCLI) GetStatus() CLIResponse[cli.TailscaleStatus] {
-	raw := c.ExecuteCommand(context.Background(), []string{"status", "--json"}, nil)
-	if !raw.Success {
-		return CLIResponse[cli.TailscaleStatus]{
-			Success: false,
-			Stderr:  raw.Stderr,
-			Error:   coalesce(raw.Error, "unknown error"),
-		}
-	}
-
-	st, err := cli.ParseSchema[cli.TailscaleStatus](raw.Data)
+// GetStatus gets Tailscale status
+func (c *TailscaleCLI) GetStatus() (*schema.TailscaleStatus, error) {
+	output, err := c.ExecuteCommand(context.Background(), []string{"status", "--json"}, nil)
 	if err != nil {
-		logger.Errorf("failed to parse status JSON: %v", err)
-
-		return CLIResponse[cli.TailscaleStatus]{
-			Success: false,
-			Error:   fmt.Sprintf("failed to parse status data: %v", err),
-		}
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
-	return CLIResponse[cli.TailscaleStatus]{
-		Success: true,
-		Data:    st,
+	status, err := schema.ParseSchema[schema.TailscaleStatus](output)
+	if err != nil {
+		logger.Error("failed to parse status JSON", "error", err, "output", output)
+		return nil, fmt.Errorf("failed to parse status data: %w", err)
 	}
+
+	return &status, nil
 }
 
 // GetVersion gets the Tailscale version
-func (c *TailscaleCLI) GetVersion() CLIResponse[string] {
+func (c *TailscaleCLI) GetVersion() (string, error) {
 	return c.ExecuteCommand(context.Background(), []string{"version"}, nil)
 }
 
@@ -265,17 +266,14 @@ type UpOptions struct {
 }
 
 // Up brings Tailscale up with structured options
-func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
+func (c *TailscaleCLI) Up(options *UpOptions) error {
 	args := []string{"up"}
 	env := []string{}
 
 	if options != nil {
 		if options.LoginServer != "" {
 			if err := c.validateStringInput(options.LoginServer, "loginServer"); err != nil {
-				return CLIResponse[string]{
-					Success: false,
-					Error:   err.Error(),
-				}
+				return fmt.Errorf("invalid login server: %w", err)
 			}
 			args = append(args, "--login-server", options.LoginServer)
 		}
@@ -290,33 +288,24 @@ func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
 
 		if options.Hostname != "" {
 			if err := c.validateStringInput(options.Hostname, "hostname"); err != nil {
-				return CLIResponse[string]{
-					Success: false,
-					Error:   err.Error(),
-				}
+				return fmt.Errorf("invalid hostname: %w", err)
 			}
 			args = append(args, "--hostname", options.Hostname)
 		}
 
 		if len(options.AdvertiseRoutes) > 0 {
 			if err := c.validateRoutes(options.AdvertiseRoutes); err != nil {
-				return CLIResponse[string]{
-					Success: false,
-					Error:   err.Error(),
-				}
+				return fmt.Errorf("invalid routes: %w", err)
 			}
 			args = append(args, "--advertise-routes", strings.Join(options.AdvertiseRoutes, ","))
 		}
 
 		if options.AuthKey != "" {
 			if err := c.validateStringInput(options.AuthKey, "authKey"); err != nil {
-				return CLIResponse[string]{
-					Success: false,
-					Error:   err.Error(),
-				}
+				return fmt.Errorf("invalid auth key: %w", err)
 			}
 			// Pass auth key securely via environment variable
-			logger.Debugf("Auth key passed securely via TS_AUTHKEY environment variable")
+			logger.Debug("Auth key passed securely via TS_AUTHKEY environment variable")
 			env = append(env, "TS_AUTHKEY="+options.AuthKey)
 		}
 
@@ -325,39 +314,30 @@ func (c *TailscaleCLI) Up(options *UpOptions) CLIResponse[string] {
 		}
 	}
 
-	return c.ExecuteCommand(context.Background(), args, env)
-}
-
-// UpSimple brings Tailscale up with optional string arguments (for backward compatibility)
-func (c *TailscaleCLI) UpSimple(args ...string) CLIResponse[string] {
-	cmdArgs := append([]string{"up"}, args...)
-	return c.ExecuteCommand(context.Background(), cmdArgs, nil)
+	_, err := c.ExecuteCommand(context.Background(), args, env)
+	return err
 }
 
 // Down brings Tailscale down
-func (c *TailscaleCLI) Down() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"down"}, nil)
+func (c *TailscaleCLI) Down() error {
+	_, err := c.ExecuteCommand(context.Background(), []string{"down"}, nil)
+	return err
 }
 
 // Logout logs out of Tailscale
-func (c *TailscaleCLI) Logout() CLIResponse[string] {
-	return c.ExecuteCommand(context.Background(), []string{"logout"}, nil)
+func (c *TailscaleCLI) Logout() error {
+	_, err := c.ExecuteCommand(context.Background(), []string{"logout"}, nil)
+	return err
 }
 
 // Ping pings a Tailscale peer with an optional count
-func (c *TailscaleCLI) Ping(target string, count int) CLIResponse[string] {
+func (c *TailscaleCLI) Ping(target string, count int) (string, error) {
 	if err := c.validateTarget(target); err != nil {
-		return CLIResponse[string]{
-			Success: false,
-			Error:   err.Error(),
-		}
+		return "", fmt.Errorf("invalid target: %w", err)
 	}
 
 	if count < minPingCount || count > maxPingCount {
-		return CLIResponse[string]{
-			Success: false,
-			Error:   fmt.Sprintf("count must be an integer between %d and %d", minPingCount, maxPingCount),
-		}
+		return "", fmt.Errorf("count must be an integer between %d and %d", minPingCount, maxPingCount)
 	}
 
 	cmdArgs := []string{"ping", target, "-c", fmt.Sprintf("%d", count)}
@@ -365,81 +345,75 @@ func (c *TailscaleCLI) Ping(target string, count int) CLIResponse[string] {
 }
 
 // IP gets the Tailscale IP addresses
-func (c *TailscaleCLI) IP() CLIResponse[string] {
+func (c *TailscaleCLI) IP() (string, error) {
 	return c.ExecuteCommand(context.Background(), []string{"ip"}, nil)
 }
 
 // Netcheck runs network connectivity check
-func (c *TailscaleCLI) Netcheck() CLIResponse[string] {
+func (c *TailscaleCLI) Netcheck() (string, error) {
 	return c.ExecuteCommand(context.Background(), []string{"netcheck"}, nil)
 }
 
 // SetExitNode sets or clears the exit node
-func (c *TailscaleCLI) SetExitNode(nodeID string) CLIResponse[string] {
+func (c *TailscaleCLI) SetExitNode(nodeID string) error {
 	args := []string{"set"}
 
 	if nodeID != "" {
 		if err := c.validateTarget(nodeID); err != nil {
-			return CLIResponse[string]{
-				Success: false,
-				Error:   err.Error(),
-			}
+			return fmt.Errorf("invalid node ID: %w", err)
 		}
 		args = append(args, "--exit-node", nodeID)
 	} else {
 		args = append(args, "--exit-node=") // Clear exit node
 	}
 
-	return c.ExecuteCommand(context.Background(), args, nil)
+	_, err := c.ExecuteCommand(context.Background(), args, nil)
+	return err
 }
 
 // SetShieldsUp enables or disables shields up mode
-func (c *TailscaleCLI) SetShieldsUp(enabled bool) CLIResponse[string] {
+func (c *TailscaleCLI) SetShieldsUp(enabled bool) error {
 	val := "false"
 	if enabled {
 		val = "true"
 	}
-	return c.ExecuteCommand(context.Background(), []string{"set", "--shields-up", val}, nil)
+	_, err := c.ExecuteCommand(context.Background(), []string{"set", "--shields-up", val}, nil)
+	return err
 }
 
 // IsAvailable checks if the Tailscale CLI is available
-func (c *TailscaleCLI) IsAvailable() CLIResponse[bool] {
-	resp := c.ExecuteCommand(context.Background(), []string{"version"}, nil)
-	return CLIResponse[bool]{
-		Success: resp.Success,
-		Error:   resp.Error,
-		Stderr:  resp.Stderr,
-		Data:    resp.Success, // If version command succeeds, CLI is available
-	}
+func (c *TailscaleCLI) IsAvailable() bool {
+	_, err := c.ExecuteCommand(context.Background(), []string{"version"}, nil)
+	return err == nil
 }
 
 // validateTarget validates target format (hostname, IP, or Tailscale node name)
 func (c *TailscaleCLI) validateTarget(target string) error {
 	if target == "" {
-		return fmt.Errorf("invalid target specified")
+		return errors.New("target cannot be empty")
 	}
 
 	// Comprehensive validation to prevent command injection
 	dangerousChars := []string{";", "&", "|", "`", "$", "(", ")", "{", "}", "[", "]", "<", ">", "\\", "'", "\""}
 	for _, char := range dangerousChars {
 		if strings.Contains(target, char) {
-			return fmt.Errorf("invalid character '%s' in target", char)
+			return fmt.Errorf("invalid character %q in target", char)
 		}
 	}
 
 	// Additional validation for common patterns
 	if strings.Contains(target, "..") || strings.HasPrefix(target, "/") || strings.Contains(target, "~") {
-		return fmt.Errorf("invalid path patterns in target")
+		return errors.New("invalid path patterns in target")
 	}
 
 	// Validate target format using regex
 	if !validTargetPattern.MatchString(target) {
-		return fmt.Errorf("target contains invalid characters")
+		return errors.New("target contains invalid characters")
 	}
 
 	// Length validation (DNS hostname max length)
 	if len(target) > maxHostnameLen {
-		return fmt.Errorf("target too long")
+		return fmt.Errorf("target too long (max %d chars)", maxHostnameLen)
 	}
 
 	return nil
@@ -451,13 +425,13 @@ func (c *TailscaleCLI) validateStringInput(input, fieldName string) error {
 	dangerousChars := []string{";", "&", "|", "`", "$", "(", ")", "{", "}", "<", ">", "\\"}
 	for _, char := range dangerousChars {
 		if strings.Contains(input, char) {
-			return fmt.Errorf("invalid character '%s' in %s", char, fieldName)
+			return fmt.Errorf("invalid character %q in %s", char, fieldName)
 		}
 	}
 
 	// Length validation
 	if len(input) > maxArgLen {
-		return fmt.Errorf("%s too long", fieldName)
+		return fmt.Errorf("%s too long (max %d chars)", fieldName, maxArgLen)
 	}
 
 	return nil
@@ -465,20 +439,20 @@ func (c *TailscaleCLI) validateStringInput(input, fieldName string) error {
 
 // validateRoutes validates CIDR routes
 func (c *TailscaleCLI) validateRoutes(routes []string) error {
-	for _, route := range routes {
+	for i, route := range routes {
 		// Basic CIDR validation
 		if route == "0.0.0.0/0" || route == "::/0" {
 			continue // Allow default routes
 		}
 
 		if !cidrPattern.MatchString(route) {
-			return fmt.Errorf("invalid route format: %s", route)
+			return fmt.Errorf("invalid route format at index %d: %s", i, route)
 		}
 
 		// Additional validation using net package
 		_, _, err := net.ParseCIDR(route)
 		if err != nil {
-			return fmt.Errorf("invalid CIDR route %s: %v", route, err)
+			return fmt.Errorf("invalid CIDR route at index %d (%s): %w", i, route, err)
 		}
 	}
 
@@ -486,28 +460,20 @@ func (c *TailscaleCLI) validateRoutes(routes []string) error {
 }
 
 // ListPeers gets a list of peer hostnames
-func (c *TailscaleCLI) ListPeers() CLIResponse[[]string] {
-	statusResult := c.GetStatus()
-
-	if !statusResult.Success {
-		return CLIResponse[[]string]{
-			Success: false,
-			Error:   statusResult.Error,
-			Stderr:  statusResult.Stderr,
-		}
+func (c *TailscaleCLI) ListPeers() ([]string, error) {
+	status, err := c.GetStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
 	var peers []string
-	if statusResult.Data.Peer != nil {
-		for _, peer := range statusResult.Data.Peer {
+	if status.Peer != nil {
+		for _, peer := range status.Peer {
 			if peer.HostName != "" {
 				peers = append(peers, peer.HostName)
 			}
 		}
 	}
 
-	return CLIResponse[[]string]{
-		Success: true,
-		Data:    peers,
-	}
+	return peers, nil
 }

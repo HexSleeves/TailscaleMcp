@@ -12,6 +12,7 @@ import (
 	"github.com/hexsleeves/tailscale-mcp-server/internal/config"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/server"
+	"github.com/hexsleeves/tailscale-mcp-server/version"
 )
 
 var (
@@ -70,7 +71,7 @@ func init() {
 	}
 
 	// Cache the version string once during package initialization
-	cachedVersion = getVersion()
+	cachedVersion = version.Short()
 }
 
 func runServer(cmd *cobra.Command, args []string) {

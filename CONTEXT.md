@@ -5,6 +5,7 @@ This file provides essential context for AI coding agents working on the Tailsca
 ## Build/Test/Lint Commands
 
 **Go (Primary):**
+
 - `make build` - Build Go binary (always run after changes)
 - `make test` - Run all tests (unit + integration)
 - `make test-unit` - Run unit tests only
@@ -15,6 +16,7 @@ This file provides essential context for AI coding agents working on the Tailsca
 - `go test -v ./internal/tailscale -run TestSpecificFunction` - Run single test
 
 **TypeScript (Legacy):**
+
 - `npm run qa` - Quick QA: typecheck + unit tests + lint
 - `npm run typecheck` - TypeScript validation
 - `npm run lint` - ESLint
@@ -23,6 +25,7 @@ This file provides essential context for AI coding agents working on the Tailsca
 ## Code Style Guidelines
 
 **Go Conventions:**
+
 - Use Go standard naming: camelCase for private, PascalCase for exported
 - Package names: lowercase, match directory names
 - Error handling: explicit returns with `fmt.Errorf("message: %w", err)`
@@ -33,6 +36,7 @@ This file provides essential context for AI coding agents working on the Tailsca
 - Composition over inheritance, dependency injection via constructors
 
 **Project Patterns:**
+
 - Tool Registry Pattern: modular tools with Zod validation (TypeScript side)
 - Dual Integration: both CLI and API operations supported
 - Structured logging with context: `logger.Info("message", "key", value)`
@@ -40,6 +44,7 @@ This file provides essential context for AI coding agents working on the Tailsca
 - Context propagation: pass `context.Context` as first parameter
 
 **Error Handling:**
+
 - Return errors explicitly, don't panic
 - Wrap errors with context: `fmt.Errorf("operation failed: %w", err)`
 - Use custom error types for API errors with status codes

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hexsleeves/tailscale-mcp-server/internal/tailscale"
-	"github.com/hexsleeves/tailscale-mcp-server/internal/tools"
 )
 
 // ListDevicesInput defines the input schema for the list_devices tool
@@ -75,5 +74,3 @@ func (t *ListDevicesTool) Execute(ctx context.Context, args json.RawMessage) (st
 
 	return output.String(), nil
 }
-
-var _ tools.Tool = (*ListDevicesTool)(nil)

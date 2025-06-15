@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./dist/tailscale-mcp-server version --verbose)"
+    ],
+    "deny": []
+  }
+}

@@ -81,7 +81,7 @@ func Initialize(level int, logFile string) error {
 		config.Encoding = "console"
 	}
 
-	// Improve console readability with coloured, capital levels irrespective
+	// Improve console readability with colored, capital levels irrespective
 	// of dev / prod mode.go test ./... | cat
 	if config.Encoding == "console" {
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder

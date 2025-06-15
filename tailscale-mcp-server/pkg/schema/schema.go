@@ -1,4 +1,4 @@
-package cli
+package schema
 
 import (
 	"encoding/json"

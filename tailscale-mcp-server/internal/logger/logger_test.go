@@ -34,7 +34,7 @@ func TestHumanReadableConsoleOutput(t *testing.T) {
 	tmpFilePath := tmpFile.Name()
 	_ = tmpFile.Close()
 
-	// Re-initialise logger with debug level so all logs flush
+	// Re-initialize logger with debug level so all logs flush
 	err = Initialize(0, tmpFilePath)
 	require.NoError(t, err)
 

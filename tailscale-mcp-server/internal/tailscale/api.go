@@ -30,16 +30,6 @@ type APIResponse[T any] struct {
 	StatusCode int    `json:"statusCode,omitempty"`
 }
 
-// APIError represents a Tailscale API error
-type APIError struct {
-	Message    string `json:"message"`
-	StatusCode int    `json:"statusCode"`
-}
-
-func (e *APIError) Error() string {
-	return fmt.Sprintf("Tailscale API error (status %d): %s", e.StatusCode, e.Message)
-}
-
 // NewAPIClient creates a new Tailscale API client
 func NewAPIClient(cfg *config.Config) *APIClient {
 	if cfg.TailscaleAPIKey == "" {
@@ -370,4 +360,23 @@ func (c *APIClient) DeleteAuthKey(ctx context.Context, keyID string) APIResponse
 	}
 
 	return createSuccessResponse[interface{}](nil, resp.StatusCode)
+}
+
+func (c *APIClient) GetACL(ctx context.Context) APIResponse[string] {
+	resp, err := c.makeRequest(ctx, "GET", fmt.Sprintf("/tailnet/%s/acl", c.tailnet), nil)
+	if err != nil {
+		return createErrorResponse[string](err)
+	}
+
+	body, err := c.handleResponse(resp)
+	if err != nil {
+		return createErrorResponse[string](err)
+	}
+
+	var acl string
+	if err := json.Unmarshal(body, &acl); err != nil {
+		return createErrorResponse[string](fmt.Errorf("failed to parse ACL: %w", err))
+	}
+
+	return createSuccessResponse(acl, resp.StatusCode)
 }

@@ -5,6 +5,8 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+
+	"github.com/hexsleeves/tailscale-mcp-server/version"
 )
 
 // versionCmd represents the version command
@@ -19,7 +21,7 @@ var versionCmd = &cobra.Command{
 
 This is useful for debugging and support purposes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Tailscale MCP Server %s\n", getVersion())
+		fmt.Printf("Tailscale MCP Server %s\n", version.Info())
 		fmt.Printf("Built with %s\n", runtime.Version())
 		fmt.Printf("Platform: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 

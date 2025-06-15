@@ -78,7 +78,7 @@ type ServerInfo struct {
 }
 
 type ServerCapabilities struct {
-	Tools     *ToolsCapability     `json:"tools,omitempty"`
+	Tools     *ToolsCapability    `json:"tools,omitempty"`
 	Resources *ResourceCapability `json:"resources,omitempty"`
 }
 

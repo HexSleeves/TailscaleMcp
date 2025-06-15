@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
 )
 
 // useStubBinary writes a tiny stub "tailscale" binary that always exits 1 quickly.
@@ -55,14 +56,13 @@ func TestNewTailscaleCLI(t *testing.T) {
 
 func TestGetStatus(t *testing.T) {
 	cli := setupCliTest(t)
-	resp := cli.GetStatus()
+	status, err := cli.GetStatus()
 
 	// The test should pass regardless of whether Tailscale is actually running
 	// We're testing the structure and parsing, not the actual Tailscale state
-	if resp.Success {
-		status := resp.Data
-
+	if err == nil {
 		// If successful, verify the structure
+		assert.NotNil(t, status)
 		assert.NotNil(t, status.Version)
 		assert.NotNil(t, status.ClientVersion)
 		if status.ClientVersion != nil {
@@ -82,10 +82,10 @@ func TestGetStatus(t *testing.T) {
 		// If they exist, we can assert their structure.
 		// assert.NotNil(t, status.Health)
 		// assert.NotNil(t, status.Peer)
-
 	} else {
 		// If not successful, we should have an error message
-		assert.NotEmpty(t, resp.Error)
+		assert.NotNil(t, err)
+		assert.NotEmpty(t, err.Error())
 	}
 }
 
@@ -123,7 +123,7 @@ func TestValidateTarget(t *testing.T) {
 			name:        "empty target",
 			target:      "",
 			expectError: true,
-			errorMsg:    "invalid target specified",
+			errorMsg:    "target cannot be empty",
 		},
 		{
 			name:        "valid IP",
@@ -139,25 +139,25 @@ func TestValidateTarget(t *testing.T) {
 			name:        "target with semicolon",
 			target:      "host;evil",
 			expectError: true,
-			errorMsg:    "invalid character ';'",
+			errorMsg:    "invalid character \";\" in target",
 		},
 		{
 			name:        "target with pipe",
 			target:      "host|evil",
 			expectError: true,
-			errorMsg:    "invalid character '|'",
+			errorMsg:    "invalid character \"|\" in target",
 		},
 		{
 			name:        "target with backtick",
 			target:      "host`evil",
 			expectError: true,
-			errorMsg:    "invalid character '`'",
+			errorMsg:    "invalid character \"`\" in target",
 		},
 		{
 			name:        "target with dollar",
 			target:      "host$evil",
 			expectError: true,
-			errorMsg:    "invalid character '$'",
+			errorMsg:    "invalid character \"$\" in target",
 		},
 		{
 			name:        "target too long",
@@ -202,14 +202,14 @@ func TestValidateStringInput(t *testing.T) {
 			input:       "host;evil",
 			fieldName:   "hostname",
 			expectError: true,
-			errorMsg:    "invalid character ';'",
+			errorMsg:    "invalid character \";\" in hostname",
 		},
 		{
 			name:        "input with pipe",
 			input:       "host|evil",
 			fieldName:   "hostname",
 			expectError: true,
-			errorMsg:    "invalid character '|'",
+			errorMsg:    "invalid character \"|\" in hostname",
 		},
 		{
 			name:        "input too long",
@@ -422,17 +422,17 @@ func TestNewTailscaleCLI_FallbackPaths(t *testing.T) {
 	}()
 
 	os.Unsetenv("TAILSCALE_PATH")
-	
+
 	// Initialize logger for tests
 	err := logger.Initialize(0, "")
 	require.NoError(t, err)
 
 	// Set PATH to empty to force fallback path usage
 	require.NoError(t, os.Setenv("PATH", ""))
-	
+
 	// Test that NewTailscaleCLI uses fallback paths when PATH lookup fails
 	cli, err := NewTailscaleCLI()
-	
+
 	// The test result depends on whether a real Tailscale binary exists at fallback paths
 	// If found at a fallback path, it should succeed; otherwise, it should fail gracefully
 	if err != nil {
@@ -443,7 +443,7 @@ func TestNewTailscaleCLI_FallbackPaths(t *testing.T) {
 		// Binary found at a fallback path - verify it's a valid path
 		assert.NotNil(t, cli)
 		assert.NotEmpty(t, cli.tailscalePath)
-		
+
 		// Verify the path is one of the expected fallback paths
 		fallbackPaths := getTailscaleFallbackPaths()
 		found := false

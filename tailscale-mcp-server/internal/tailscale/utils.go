@@ -35,7 +35,6 @@ func (l *limitWriter) Write(p []byte) (int, error) {
 			l.n += remaining
 		}
 		return remaining, fmt.Errorf("output exceeds %d bytes: %w", l.limit, io.ErrShortWrite)
-
 	}
 
 	n, err := l.w.Write(p)
@@ -80,12 +79,4 @@ func isExecutableFile(path string) bool {
 
 	// Check if it's a regular file (not directory) and is executable
 	return !st.IsDir() && st.Mode()&0111 != 0
-}
-
-// coalesce returns the first non-empty string—handy for defaulting errors.
-func coalesce(s, fallback string) string {
-	if s != "" {
-		return s
-	}
-	return fallback
 }
