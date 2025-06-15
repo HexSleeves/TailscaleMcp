@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sync"
 
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
-	"github.com/hexsleeves/tailscale-mcp-server/pkg/mcp"
+	"github.com/hexsleeves/tailscale-mcp-server/internal/mcp"
 )
 
 // StdioServer implements MCP protocol over stdin/stdout
@@ -23,9 +24,12 @@ type StdioServer struct {
 
 // NewStdioServer creates a new stdio server instance
 func NewStdioServer(server mcp.Server) *StdioServer {
+	sc := bufio.NewScanner(os.Stdin)
+	sc.Buffer(make([]byte, 0, 64*1024), 10*1024*1024) // 10 MiB hard-cap
+
 	return &StdioServer{
 		server: server,
-		reader: bufio.NewScanner(os.Stdin),
+		reader: sc,
 		writer: os.Stdout,
 	}
 }
@@ -114,6 +118,10 @@ func (s *StdioServer) handleInitialize(ctx context.Context, id json.RawMessage, 
 
 	response, err := s.server.Initialize(ctx, msg.Params)
 	if err != nil {
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			return s.sendError(id, mcpErr)
+		}
 		return s.sendError(id, mcp.NewInternalError(err.Error()))
 	}
 
@@ -134,6 +142,10 @@ func (s *StdioServer) handleListTools(ctx context.Context, id json.RawMessage, m
 
 	response, err := s.server.ListTools(ctx, params)
 	if err != nil {
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			return s.sendError(id, mcpErr)
+		}
 		return s.sendError(id, mcp.NewInternalError(err.Error()))
 	}
 
@@ -153,6 +165,10 @@ func (s *StdioServer) handleCallTool(ctx context.Context, id json.RawMessage, me
 
 	response, err := s.server.CallTool(ctx, msg.Params)
 	if err != nil {
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			return s.sendError(id, mcpErr)
+		}
 		return s.sendError(id, mcp.NewToolExecutionError(msg.Params.Name, err))
 	}
 
@@ -161,8 +177,16 @@ func (s *StdioServer) handleCallTool(ctx context.Context, id json.RawMessage, me
 
 // handleShutdown processes shutdown requests
 func (s *StdioServer) handleShutdown(ctx context.Context, id json.RawMessage, message string) error {
-	err := s.server.Shutdown(ctx)
-	if err != nil {
+	var msg mcp.Message[mcp.ShutdownRequest, any]
+	if err := json.Unmarshal([]byte(message), &msg); err != nil {
+		return s.sendError(id, mcp.NewInvalidParamsError(err.Error()))
+	}
+
+	if err := s.server.Shutdown(ctx, msg.Params); err != nil {
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			return s.sendError(id, mcpErr)
+		}
 		return s.sendError(id, mcp.NewInternalError(err.Error()))
 	}
 
@@ -171,7 +195,7 @@ func (s *StdioServer) handleShutdown(ctx context.Context, id json.RawMessage, me
 }
 
 // sendResponse sends a successful response
-func (s *StdioServer) sendResponse(id json.RawMessage, result interface{}) error {
+func (s *StdioServer) sendResponse(id json.RawMessage, result any) error {
 	response := mcp.NewResponse(id, &result)
 	return s.writeMessage(response)
 }

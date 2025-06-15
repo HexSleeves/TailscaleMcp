@@ -21,7 +21,6 @@ type Config struct {
 
 	// Server configuration
 	ServerMode string `json:"server_mode"`
-	HTTPPort   int    `json:"http_port"`
 }
 
 // Load loads configuration from environment variables
@@ -34,7 +33,6 @@ func Load() (*Config, error) {
 		TailscaleAPIBaseURL: "https://api.tailscale.com",
 		LogLevel:            1, // INFO level
 		ServerMode:          "stdio",
-		HTTPPort:            8080,
 	}
 
 	// Load from environment variables

@@ -79,3 +79,7 @@ tasks/
 *.ntvs*
 *.njsproj
 *.sln
+
+# AI Stuff
+.roo
+.roomodes

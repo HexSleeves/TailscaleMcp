@@ -6,8 +6,9 @@ import (
 
 	"github.com/hexsleeves/tailscale-mcp-server/internal/config"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
+	"github.com/hexsleeves/tailscale-mcp-server/internal/mcp"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/tailscale"
-	"github.com/hexsleeves/tailscale-mcp-server/pkg/mcp"
+	"github.com/hexsleeves/tailscale-mcp-server/internal/tools"
 )
 
 // ServerOption configures the TailscaleMCPServer (functional options pattern)
@@ -18,6 +19,7 @@ type ServerOption func(*TailscaleMCPServer) error
 type TailscaleMCPServer struct {
 	config    *config.Config
 	api       *tailscale.APIClient
+	cli       *tailscale.TailscaleCLI
 	mcpServer mcp.Server
 }
 
@@ -47,16 +49,27 @@ func New(cfg *config.Config, opts ...ServerOption) (*TailscaleMCPServer, error) 
 		"config", cfg.SanitizedCopy(),
 		"has_api_credentials", cfg.HasAPICredentials())
 
-	// Initialize Tailscale API client
+	// Initialize Tailscale clients
 	api := tailscale.NewAPIClient(cfg)
+	cli, err := tailscale.NewTailscaleCLI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tailscale cli: %w", err)
+	}
+
+	// Create tool registry and register tools
+	registry := tools.NewToolRegistry(api, cli)
+	// TODO: Register tools here
 
 	// Create server with default MCP implementation
 	server := &TailscaleMCPServer{
 		config: cfg,
 		api:    api,
-		mcpServer: &mcp.BasicMCPServer{
-			Api: api,
-		},
+		cli:    cli,
+		mcpServer: mcp.NewMCPServer(
+			registry,
+			"tailscale-mcp-server",
+			"0.1.0", // TODO: Get version from config or build flags
+		),
 	}
 
 	// Apply functional options
@@ -89,7 +102,7 @@ func (s *TailscaleMCPServer) StartHTTP(ctx context.Context, port int) error {
 func (s *TailscaleMCPServer) Shutdown(ctx context.Context) error {
 	logger.Info("Shutting down TailscaleMCPServer")
 
-	if err := s.mcpServer.Shutdown(ctx); err != nil {
+	if err := s.mcpServer.Shutdown(ctx, &mcp.ShutdownRequest{}); err != nil {
 		logger.Error("Error shutting down MCP server", "error", err)
 		return err
 	}

@@ -10,7 +10,7 @@ type Device struct {
 	ClientVersion             string              `json:"clientVersion"`
 	UpdateAvailable           bool                `json:"updateAvailable"`
 	OS                        string              `json:"os"`
-	Created                   time.Time           `json:"created"`
+	Created                   time.Time           `json:"created,omitempty"`
 	LastSeen                  time.Time           `json:"lastSeen"`
 	KeyExpiryDisabled         bool                `json:"keyExpiryDisabled"`
 	Expires                   time.Time           `json:"expires"`

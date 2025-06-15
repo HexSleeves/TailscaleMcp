@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -52,7 +53,7 @@ type SelfStatus struct {
 	ExitNode            bool           `json:"ExitNode"`
 	ExitNodeOption      bool           `json:"ExitNodeOption"`
 	Active              bool           `json:"Active"`
-	PeerAPIURL          []string       `json:"PeerAPIURL,omitempty" validate:"dive"`
+	PeerAPIURL          []string       `json:"PeerAPIURL,omitempty" validate:"dive,url"`
 	TaildropTarget      int            `json:"TaildropTarget"`
 	NoFileSharingReason string         `json:"NoFileSharingReason"`
 	Capabilities        []string       `json:"Capabilities,omitempty"`
@@ -112,10 +113,13 @@ func ParseSchemaWithValidator[T any](
 		return zero, err
 	}
 
-	// Use validator package for struct validation
-	if err := validate.Struct(dst); err != nil {
-		var zero T
-		return zero, err
+	// Validate only when T is a struct or pointer to struct
+	if reflect.TypeOf(dst).Kind() == reflect.Struct ||
+		(reflect.TypeOf(dst).Kind() == reflect.Ptr && reflect.TypeOf(dst).Elem().Kind() == reflect.Struct) {
+		if err := validate.Struct(dst); err != nil {
+			var zero T
+			return zero, err
+		}
 	}
 
 	// Apply custom validator if provided

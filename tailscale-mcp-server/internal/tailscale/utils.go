@@ -3,9 +3,11 @@ package tailscale
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -32,8 +34,10 @@ func (l *limitWriter) Write(p []byte) (int, error) {
 			l.w.Write(p[:remaining])
 			l.n += remaining
 		}
-		return remaining, fmt.Errorf("output exceeds %d bytes", l.limit)
+		return remaining, fmt.Errorf("output exceeds %d bytes: %w", l.limit, io.ErrShortWrite)
+
 	}
+
 	n, err := l.w.Write(p)
 	l.n += n
 	return n, err
@@ -68,6 +72,10 @@ func isExecutableFile(path string) bool {
 	st, err := os.Stat(path)
 	if err != nil {
 		return false
+	}
+
+	if runtime.GOOS == "windows" {
+		return !st.IsDir() && strings.HasSuffix(strings.ToLower(path), ".exe")
 	}
 
 	// Check if it's a regular file (not directory) and is executable

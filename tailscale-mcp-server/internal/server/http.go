@@ -3,13 +3,14 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/hexsleeves/tailscale-mcp-server/internal/logger"
-	"github.com/hexsleeves/tailscale-mcp-server/pkg/mcp"
+	"github.com/hexsleeves/tailscale-mcp-server/internal/mcp"
 )
 
 // HTTPServer implements MCP protocol over HTTP
@@ -148,7 +149,12 @@ func (s *HTTPServer) handleInitialize(w http.ResponseWriter, r *http.Request, id
 
 	response, err := s.server.Initialize(r.Context(), msg.Params)
 	if err != nil {
-		s.sendError(w, id, mcp.NewInternalError(err.Error()))
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			s.sendError(w, id, mcpErr)
+		} else {
+			s.sendError(w, id, mcp.NewInternalError(err.Error()))
+		}
 		return
 	}
 
@@ -170,7 +176,12 @@ func (s *HTTPServer) handleListTools(w http.ResponseWriter, r *http.Request, id 
 
 	response, err := s.server.ListTools(r.Context(), params)
 	if err != nil {
-		s.sendError(w, id, mcp.NewInternalError(err.Error()))
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			s.sendError(w, id, mcpErr)
+		} else {
+			s.sendError(w, id, mcp.NewInternalError(err.Error()))
+		}
 		return
 	}
 
@@ -192,7 +203,12 @@ func (s *HTTPServer) handleCallTool(w http.ResponseWriter, r *http.Request, id j
 
 	response, err := s.server.CallTool(r.Context(), msg.Params)
 	if err != nil {
-		s.sendError(w, id, mcp.NewToolExecutionError(msg.Params.Name, err))
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			s.sendError(w, id, mcpErr)
+		} else {
+			s.sendError(w, id, mcp.NewToolExecutionError(msg.Params.Name, err))
+		}
 		return
 	}
 
@@ -201,9 +217,19 @@ func (s *HTTPServer) handleCallTool(w http.ResponseWriter, r *http.Request, id j
 
 // handleShutdown processes shutdown requests
 func (s *HTTPServer) handleShutdown(w http.ResponseWriter, r *http.Request, id json.RawMessage, rawMsg map[string]json.RawMessage) {
-	err := s.server.Shutdown(r.Context())
-	if err != nil {
-		s.sendError(w, id, mcp.NewInternalError(err.Error()))
+	var msg mcp.Message[mcp.ShutdownRequest, any]
+	if err := s.parseMessage(rawMsg, &msg); err != nil {
+		s.sendError(w, id, mcp.NewInvalidParamsError(err.Error()))
+		return
+	}
+
+	if err := s.server.Shutdown(r.Context(), msg.Params); err != nil {
+		var mcpErr *mcp.Error
+		if errors.As(err, &mcpErr) {
+			s.sendError(w, id, mcpErr)
+		} else {
+			s.sendError(w, id, mcp.NewInternalError(err.Error()))
+		}
 		return
 	}
 

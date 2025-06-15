@@ -78,18 +78,23 @@ type ServerInfo struct {
 }
 
 type ServerCapabilities struct {
-	Tools *ToolsCapability `json:"tools,omitempty"`
+	Tools     *ToolsCapability     `json:"tools,omitempty"`
+	Resources *ResourceCapability `json:"resources,omitempty"`
 }
 
 type ToolsCapability struct {
 	ListChanged *bool `json:"listChanged,omitempty"`
 }
 
+type ResourceCapability struct {
+	// No specific capabilities defined yet
+}
+
 // Tools
 type Tool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	InputSchema any    `json:"inputSchema"`
 }
 
 type ListToolsRequest struct{}
@@ -113,12 +118,23 @@ type ContentBlock struct {
 	Text string `json:"text"`
 }
 
+// Resource represents a data source provided by the server.
+type Resource struct {
+	URI         string `json:"uri"`
+	Description string `json:"description,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
+	Content     any    `json:"content,omitempty"`
+}
+
+// Shutdown
+type ShutdownRequest struct{}
+
 // Server interface
 type Server interface {
 	Initialize(ctx context.Context, req *InitializeRequest) (*InitializeResponse, error)
 	ListTools(ctx context.Context, req *ListToolsRequest) (*ListToolsResponse, error)
 	CallTool(ctx context.Context, req *CallToolRequest) (*CallToolResponse, error)
-	Shutdown(ctx context.Context) error
+	Shutdown(ctx context.Context, req *ShutdownRequest) error
 }
 
 // Helper functions

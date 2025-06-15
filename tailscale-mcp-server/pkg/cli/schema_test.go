@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/go-playground/assert/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,6 +14,8 @@ type TestStruct struct {
 }
 
 func TestParseSchema(t *testing.T) {
+	t.Parallel()
+
 	raw := `{"id": 1, "name": "test"}`
 	dst, err := ParseSchema[TestStruct](raw)
 
@@ -23,6 +25,8 @@ func TestParseSchema(t *testing.T) {
 }
 
 func TestParseSchemaWithValidator(t *testing.T) {
+	t.Parallel()
+
 	raw := `{"id": 1, "name": "test"}`
 	dst, err := ParseSchemaWithValidator(raw, func(dst TestStruct) error {
 		if dst.ID < 0 {
